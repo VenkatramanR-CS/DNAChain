@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNA Blockchain Access System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-dna"></i>
+                    <h1>DNA Blockchain Access System</h1>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="dashboard">
+                        <i class="fas fa-chart-dashboard"></i> Dashboard
+                    </button>
+                    <button class="nav-btn" data-tab="samples">
+                        <i class="fas fa-vial"></i> DNA Samples
+                    </button>
+                    <button class="nav-btn" data-tab="nfts">
+                        <i class="fas fa-certificate"></i> NFTs
+                    </button>
+                    <button class="nav-btn" data-tab="access">
+                        <i class="fas fa-key"></i> Access Control
+                    </button>
+                    <button class="nav-btn" data-tab="zkp">
+                        <i class="fas fa-shield-alt"></i> Zero-Knowledge
+                    </button>
+                </nav>
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="current-user">User123</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-vial"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-samples">0</h3>
+                            <p>DNA Samples</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-certificate"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-nfts">0</h3>
+                            <p>NFTs Minted</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="pending-requests">0</h3>
+                            <p>Pending Requests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-shield-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="verified-proofs">0</h3>
+                            <p>Verified Proofs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-sections">
+                    <div class="section">
+                        <h2><i class="fas fa-chart-line"></i> System Status</h2>
+                        <div class="status-grid">
+                            <div class="status-item">
+                                <span class="status-label">Blockchain:</span>
+                                <span class="status-value" id="blockchain-status">Running</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">API Server:</span>
+                                <span class="status-value" id="api-status">Online</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Uptime:</span>
+                                <span class="status-value" id="system-uptime">0h 0m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                        <div id="recent-activity" class="activity-list">
+                            <!-- Activity items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DNA Samples Tab -->
+            <div id="samples" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-vial"></i> DNA Samples Management</h2>
+                    <button class="btn btn-primary" onclick="showUploadModal()">
+                        <i class="fas fa-upload"></i> Upload Sample
+                    </button>
+                </div>
+
+                <div class="samples-grid" id="samples-grid">
+                    <!-- Sample cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- NFTs Tab -->
+            <div id="nfts" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-certificate"></i> NFT Management</h2>
+                    <button class="btn btn-primary" onclick="showMintModal()">
+                        <i class="fas fa-plus"></i> Mint NFT
+                    </button>
+                </div>
+
+                <div class="nfts-grid" id="nfts-grid">
+                    <!-- NFT cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- Access Control Tab -->
+            <div id="access" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-key"></i> Access Control</h2>
+                    <button class="btn btn-primary" onclick="showAccessRequestModal()">
+                        <i class="fas fa-hand-paper"></i> Request Access
+                    </button>
+                </div>
+
+                <div class="access-sections">
+                    <div class="section">
+                        <h3>Pending Requests</h3>
+                        <div id="pending-requests-list" class="requests-list">
+                            <!-- Pending requests will be populated here -->
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>My Requests</h3>
+                        <div id="my-requests-list" class="requests-list">
+                            <!-- User's requests will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zero-Knowledge Proofs Tab -->
+            <div id="zkp" class="tab-content">
+                <div class="section-header">
+                    <h2><i class="fas fa-shield-alt"></i> Zero-Knowledge Proofs</h2>
+                    <button class="btn btn-primary" onclick="showZKPModal()">
+                        <i class="fas fa-lock"></i> Generate Proof
+                    </button>
+                </div>
+
+                <div class="zkp-sections">
+                    <div class="section">
+                        <h3>Proof Generator</h3>
+                        <div class="zkp-form">
+                            <div class="form-group">
+                                <label>Circuit Type:</label>
+                                <select id="circuit-type">
+                                    <option value="access_permission">Access Permission</option>
+                                    <option value="identity_verification">Identity Verification</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Sample ID:</label>
+                                <input type="text" id="zkp-sample-id" placeholder="Enter sample ID">
+                            </div>
+                            <div class="form-group">
+                                <label>User Secret:</label>
+                                <input type="password" id="zkp-user-secret" placeholder="Enter user secret">
+                            </div>
+                            <button class="btn btn-secondary" onclick="generateZKProof()">
+                                <i class="fas fa-cog"></i> Generate Proof
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3>Verified Proofs</h3>
+                        <div id="verified-proofs-list" class="proofs-list">
+                            <!-- Verified proofs will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Upload Sample Modal -->
+    <div id="upload-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-upload"></i> Upload DNA Sample</h3>
+                <button class="close-btn" onclick="closeModal('upload-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="upload-form">
+                    <div class="form-group">
+                        <label>Sample ID:</label>
+                        <input type="text" id="sample-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Owner Address:</label>
+                        <input type="text" id="owner-address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>DNA File:</label>
+                        <input type="file" id="dna-file" accept=".txt,.fasta,.fa" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Encryption Password:</label>
+                        <input type="password" id="encryption-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sample Type:</label>
+                        <select id="sample-type">
+                            <option value="saliva">Saliva</option>
+                            <option value="blood">Blood</option>
+                            <option value="tissue">Tissue</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Collection Date:</label>
+                        <input type="date" id="collection-date">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('upload-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="uploadSample()">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mint NFT Modal -->
+    <div id="mint-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-certificate"></i> Mint NFT</h3>
+                <button class="close-btn" onclick="closeModal('mint-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="mint-form">
+                    <div class="form-group">
+                        <label>Token ID:</label>
+                        <input type="text" id="token-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sample ID:</label>
+                        <input type="text" id="nft-sample-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Owner Address:</label>
+                        <input type="text" id="nft-owner-address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Metadata URI:</label>
+                        <input type="url" id="metadata-uri" placeholder="https://...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('mint-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="mintNFT()">
+                    <i class="fas fa-certificate"></i> Mint
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Access Request Modal -->
+    <div id="access-request-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-hand-paper"></i> Request Access</h3>
+                <button class="close-btn" onclick="closeModal('access-request-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="access-request-form">
+                    <div class="form-group">
+                        <label>Requester Address:</label>
+                        <input type="text" id="requester-address" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sample ID:</label>
+                        <input type="text" id="access-sample-id" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Purpose:</label>
+                        <textarea id="access-purpose" rows="3" required placeholder="Describe the purpose of access..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry (hours):</label>
+                        <input type="number" id="expiry-hours" value="24" min="1" max="168">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('access-request-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="requestAccess()">
+                    <i class="fas fa-paper-plane"></i> Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
