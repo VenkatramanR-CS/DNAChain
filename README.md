@@ -36,22 +36,26 @@ A secure, decentralized system for DNA sample storage and access control using b
 pip install -r requirements.txt
 ```
 
-### 2. Start Complete System
+### 2. Configure Firebase (Optional)
+```bash
+# Copy the template and add your Firebase credentials
+cp firebase/web-config.template.js firebase/web-config.js
+# Edit firebase/web-config.js with your actual Firebase config
+```
+
+### 3. Start Complete System
 ```bash
 python scripts/start_full_system.py
 ```
 
-### 3. Access the System
+### 4. Access the System
 - **Frontend Application**: http://localhost:8080
 - **API Documentation**: http://localhost:8000/docs
 - **System Status**: http://localhost:8000/system/full-status
 - **Health Check**: http://localhost:8000/health
 
-### 4. Run Demos
+### 5. Run Demos
 ```bash
-# Basic system test
-python scripts/test_system.py
-
 # Advanced feature demo
 python demo_advanced.py
 
@@ -199,6 +203,20 @@ dna-blockchain-system/
 - **Multi-Signature Approvals**: Distributed access control
 - **Zero-Knowledge Proofs**: Privacy-preserving verification
 - **Secure Key Storage**: Protected local key management
+
+### 🔐 Security Configuration
+
+#### Firebase Credentials
+- **Never commit** `firebase/web-config.js` to version control
+- **Use template** `firebase/web-config.template.js` for setup
+- **Store credentials** securely outside the repository
+- **Enable Firebase security rules** for production
+
+#### Key Management
+- **RSA keys** are auto-generated in `.keys/` folder
+- **Keep private keys** secure and never share
+- **Rotate keys** regularly in production
+- **Use environment variables** for sensitive configuration
 
 ## 📊 System Status
 

@@ -3,7 +3,7 @@ Pydantic models for DNA Access System API
 """
 
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 
 
@@ -225,6 +225,82 @@ class SystemStatus(BaseModel):
     verified_proofs: int
     active_proposals: int
     uptime: str
+
+
+class UserRegistration(BaseModel):
+    """User registration request"""
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., min_length=6, description="User password")
+    display_name: str = Field(..., description="User display name")
+    role: str = Field(default="user", description="User role")
+
+
+class UserLogin(BaseModel):
+    """User login request"""
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., description="User password")
+
+
+class UserProfile(BaseModel):
+    """User profile"""
+    uid: str
+    email: str
+    display_name: str
+    role: str
+    created_at: datetime
+    last_login: Optional[datetime] = None
+    wallet_address: Optional[str] = None
+    verified: bool = False
+
+
+class AuthResponse(BaseModel):
+    """Authentication response"""
+    success: bool
+    user: Optional[UserProfile] = None
+    token: Optional[str] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+
+class SampleMetadata(BaseModel):
+    """DNA sample metadata"""
+    sample_type: str
+    collection_date: Optional[str] = None
+    patient_id: Optional[str] = None
+    lab_id: Optional[str] = None
+    quality_score: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class AdvancedDNAUpload(BaseModel):
+    """Advanced DNA sample upload with Firebase"""
+    sample_id: str = Field(..., description="Unique sample identifier")
+    owner_uid: str = Field(..., description="Owner Firebase UID")
+    file_data: str = Field(..., description="Base64 encoded file data")
+    filename: str = Field(..., description="Original filename")
+    password: str = Field(..., description="Encryption password")
+    metadata: SampleMetadata = Field(..., description="Sample metadata")
+
+
+class AccessApproval(BaseModel):
+    """Access request approval/denial"""
+    request_id: str = Field(..., description="Request ID")
+    approver_uid: str = Field(..., description="Approver Firebase UID")
+    action: str = Field(..., description="approve or deny")
+    reason: Optional[str] = Field(None, description="Reason for decision")
+
+
+class NFTTransfer(BaseModel):
+    """NFT transfer request"""
+    token_id: str = Field(..., description="Token ID")
+    from_uid: str = Field(..., description="Current owner UID")
+    to_uid: str = Field(..., description="New owner UID")
+    password: str = Field(..., description="Owner's password for verification")
+
+
+class BatchZKPVerification(BaseModel):
+    """Batch ZKP verification request"""
+    proofs: List[ZKProofRequest] = Field(..., description="List of proofs to verify")
 
 
 class ErrorResponse(BaseModel):

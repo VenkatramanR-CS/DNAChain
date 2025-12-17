@@ -6,9 +6,288 @@
     <title>DNA Blockchain Access System</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase Configuration -->
+    <script src="web-config.js"></script>
+    
+    <!-- Firebase SDK v10 -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            GithubAuthProvider, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged, 
+            signOut,
+            updateProfile
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc 
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        try {
+            // Get Firebase configuration from external file
+            const firebaseConfig = window.firebaseWebConfig;
+            
+            if (!firebaseConfig) {
+                throw new Error('Firebase configuration not found');
+            }
+            
+            // Initialize Firebase
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            
+            // Make Firebase available globally
+            window.firebaseAuth = auth;
+            window.firebaseDb = db;
+            window.GoogleAuthProvider = GoogleAuthProvider;
+            window.GithubAuthProvider = GithubAuthProvider;
+            window.signInWithPopup = signInWithPopup;
+            window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+            window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+            window.onAuthStateChanged = onAuthStateChanged;
+            window.signOut = signOut;
+            window.updateProfile = updateProfile;
+            window.setDoc = setDoc;
+            window.getDoc = getDoc;
+            window.doc = doc;
+            
+            console.log('🔥 Firebase initialized successfully');
+            
+        } catch (error) {
+            console.error('❌ Firebase initialization failed:', error);
+            console.log('📝 Running in demo mode without Firebase');
+            
+            // Fallback to demo mode
+            window.firebaseAuth = null;
+            window.firebaseDb = null;
+        }
+    </script>
 </head>
 <body>
-    <div class="app-container">
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="modal active">
+        <div class="auth-container">
+            <!-- Left Side - Branding -->
+            <div class="auth-branding">
+                <div class="brand-content">
+                    <div class="brand-logo">
+                        <div class="dna-helix">
+                            <i class="fas fa-dna"></i>
+                        </div>
+                        <h1>DNA Blockchain</h1>
+                        <span class="brand-subtitle">Access System</span>
+                    </div>
+                    
+                    <div class="brand-features">
+                        <div class="feature-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Military-grade encryption</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-link"></i>
+                            <span>Blockchain security</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-eye-slash"></i>
+                            <span>Zero-knowledge privacy</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-cloud"></i>
+                            <span>Decentralized storage</span>
+                        </div>
+                    </div>
+                    
+                    <div class="brand-stats">
+                        <div class="stat">
+                            <span class="stat-number">256-bit</span>
+                            <span class="stat-label">AES Encryption</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">99.9%</span>
+                            <span class="stat-label">Uptime</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">Monitoring</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="particles">
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                </div>
+            </div>
+            
+            <!-- Right Side - Authentication Forms -->
+            <div class="auth-forms">
+                <div class="form-header">
+                    <h2 id="form-title">Welcome Back</h2>
+                    <p id="form-subtitle">Sign in to access your secure DNA vault</p>
+                </div>
+                
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="login">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Sign In</span>
+                    </button>
+                    <button class="auth-tab" data-tab="register">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Create Account</span>
+                    </button>
+                </div>
+                
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form active">
+                    <form id="login-form-element" class="form-container">
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-envelope input-icon"></i>
+                                <input type="email" id="login-email" placeholder="Enter your email" required>
+                                <label for="login-email">Email Address</label>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input type="password" id="login-password" placeholder="Enter your password" required>
+                                <label for="login-password">Password</label>
+                                <button type="button" class="password-toggle" onclick="togglePassword('login-password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-options">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="remember-me">
+                                <span class="checkmark"></span>
+                                <span class="checkbox-label">Remember me</span>
+                            </label>
+                            <a href="#" class="forgot-password">Forgot password?</a>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>Sign In</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </form>
+                    
+                    <div class="auth-divider">
+                        <span>or continue with</span>
+                    </div>
+                    
+                    <div class="social-login">
+                        <button id="google-login" class="btn btn-social btn-google">
+                            <i class="fab fa-google"></i>
+                            <span>Google</span>
+                        </button>
+                        <button id="github-login" class="btn btn-social btn-github">
+                            <i class="fab fa-github"></i>
+                            <span>GitHub</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form">
+                    <form id="register-form-element" class="form-container">
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-user input-icon"></i>
+                                <input type="text" id="register-name" placeholder="Enter your full name" required>
+                                <label for="register-name">Full Name</label>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-envelope input-icon"></i>
+                                <input type="email" id="register-email" placeholder="Enter your email" required>
+                                <label for="register-email">Email Address</label>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-briefcase input-icon"></i>
+                                <select id="register-role" required>
+                                    <option value="">Select your role</option>
+                                    <option value="patient">Patient</option>
+                                    <option value="researcher">Researcher</option>
+                                    <option value="lab_tech">Lab Technician</option>
+                                    <option value="doctor">Medical Doctor</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                                <label for="register-role">Professional Role</label>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input type="password" id="register-password" placeholder="Create a strong password" required minlength="8">
+                                <label for="register-password">Password</label>
+                                <button type="button" class="password-toggle" onclick="togglePassword('register-password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill"></div>
+                                </div>
+                                <span class="strength-text">Password strength</span>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock input-icon"></i>
+                                <input type="password" id="register-confirm-password" placeholder="Confirm your password" required minlength="8">
+                                <label for="register-confirm-password">Confirm Password</label>
+                                <button type="button" class="password-toggle" onclick="togglePassword('register-confirm-password')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-options">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="agree-terms" required>
+                                <span class="checkmark"></span>
+                                <span class="checkbox-label">
+                                    I agree to the <a href="#" class="link">Terms of Service</a> and 
+                                    <a href="#" class="link">Privacy Policy</a>
+                                </span>
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Create Account</span>
+                            <div class="btn-loader"></div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="app-container" id="main-app" style="display: none;">
         <!-- Header -->
         <header class="header">
             <div class="header-content">
@@ -34,8 +313,21 @@
                     </button>
                 </nav>
                 <div class="user-info">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="current-user">User123</span>
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <span id="current-user-name">Loading...</span>
+                        <span id="current-user-email">Loading...</span>
+                    </div>
+                    <div class="user-menu">
+                        <button class="btn btn-secondary" onclick="showUserProfile()">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <button class="btn btn-secondary" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -89,15 +381,19 @@
                         <div class="status-grid">
                             <div class="status-item">
                                 <span class="status-label">Blockchain:</span>
-                                <span class="status-value" id="blockchain-status">Running</span>
+                                <span class="status-value" id="blockchain-status">Loading...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Firebase:</span>
+                                <span class="status-value" id="firebase-status">Loading...</span>
                             </div>
                             <div class="status-item">
                                 <span class="status-label">API Server:</span>
-                                <span class="status-value" id="api-status">Online</span>
+                                <span class="status-value" id="api-status">Loading...</span>
                             </div>
                             <div class="status-item">
                                 <span class="status-label">Uptime:</span>
-                                <span class="status-value" id="system-uptime">0h 0m</span>
+                                <span class="status-value" id="system-uptime">Loading...</span>
                             </div>
                         </div>
                     </div>
@@ -150,14 +446,14 @@
 
                 <div class="access-sections">
                     <div class="section">
-                        <h3>Pending Requests</h3>
+                        <h3>Pending Requests (For My Samples)</h3>
                         <div id="pending-requests-list" class="requests-list">
                             <!-- Pending requests will be populated here -->
                         </div>
                     </div>
 
                     <div class="section">
-                        <h3>My Requests</h3>
+                        <h3>My Access Requests</h3>
                         <div id="my-requests-list" class="requests-list">
                             <!-- User's requests will be populated here -->
                         </div>
@@ -176,7 +472,7 @@
 
                 <div class="zkp-sections">
                     <div class="section">
-                        <h3>Proof Generator</h3>
+                        <h3>Generate New Proof</h3>
                         <div class="zkp-form">
                             <div class="form-group">
                                 <label>Circuit Type:</label>
@@ -200,9 +496,9 @@
                     </div>
 
                     <div class="section">
-                        <h3>Verified Proofs</h3>
-                        <div id="verified-proofs-list" class="proofs-list">
-                            <!-- Verified proofs will be populated here -->
+                        <h3>My Proofs</h3>
+                        <div id="user-proofs-list" class="proofs-list">
+                            <!-- User's proofs will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -222,19 +518,17 @@
                 <form id="upload-form">
                     <div class="form-group">
                         <label>Sample ID:</label>
-                        <input type="text" id="sample-id" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Owner Address:</label>
-                        <input type="text" id="owner-address" required>
+                        <input type="text" id="sample-id" required placeholder="e.g., DNA_001">
                     </div>
                     <div class="form-group">
                         <label>DNA File:</label>
-                        <input type="file" id="dna-file" accept=".txt,.fasta,.fa" required>
+                        <input type="file" id="dna-file" accept=".txt,.fasta,.fa,.fastq" required>
+                        <small>Supported formats: .txt, .fasta, .fa, .fastq</small>
                     </div>
                     <div class="form-group">
                         <label>Encryption Password:</label>
                         <input type="password" id="encryption-password" required>
+                        <small>This password will be required to decrypt the file</small>
                     </div>
                     <div class="form-group">
                         <label>Sample Type:</label>
@@ -249,12 +543,20 @@
                         <label>Collection Date:</label>
                         <input type="date" id="collection-date">
                     </div>
+                    <div class="form-group">
+                        <label>Patient ID (Optional):</label>
+                        <input type="text" id="patient-id" placeholder="Patient identifier">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (Optional):</label>
+                        <textarea id="sample-notes" rows="3" placeholder="Additional notes about the sample..."></textarea>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('upload-modal')">Cancel</button>
                 <button class="btn btn-primary" onclick="uploadSample()">
-                    <i class="fas fa-upload"></i> Upload
+                    <i class="fas fa-upload"></i> Upload Sample
                 </button>
             </div>
         </div>
@@ -271,18 +573,16 @@
                 <form id="mint-form">
                     <div class="form-group">
                         <label>Token ID:</label>
-                        <input type="text" id="token-id" required>
+                        <input type="text" id="token-id" required placeholder="e.g., NFT_001">
                     </div>
                     <div class="form-group">
                         <label>Sample ID:</label>
-                        <input type="text" id="nft-sample-id" required>
+                        <select id="nft-sample-id" required>
+                            <option value="">Select a sample...</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Owner Address:</label>
-                        <input type="text" id="nft-owner-address" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Metadata URI:</label>
+                        <label>Metadata URI (Optional):</label>
                         <input type="url" id="metadata-uri" placeholder="https://...">
                     </div>
                 </form>
@@ -290,7 +590,7 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('mint-modal')">Cancel</button>
                 <button class="btn btn-primary" onclick="mintNFT()">
-                    <i class="fas fa-certificate"></i> Mint
+                    <i class="fas fa-certificate"></i> Mint NFT
                 </button>
             </div>
         </div>
@@ -306,20 +606,18 @@
             <div class="modal-body">
                 <form id="access-request-form">
                     <div class="form-group">
-                        <label>Requester Address:</label>
-                        <input type="text" id="requester-address" required>
-                    </div>
-                    <div class="form-group">
                         <label>Sample ID:</label>
-                        <input type="text" id="access-sample-id" required>
+                        <input type="text" id="access-sample-id" required placeholder="Enter sample ID">
                     </div>
                     <div class="form-group">
                         <label>Purpose:</label>
                         <textarea id="access-purpose" rows="3" required placeholder="Describe the purpose of access..."></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Expiry (hours):</label>
+                        <label>Access Duration (hours):</label>
+                        <input type="number" id="access-duration" min="1" max="168" required placeholder="Enter duration in hours">
                         <input type="number" id="expiry-hours" value="24" min="1" max="168">
+                        <small>Maximum 168 hours (7 days)</small>
                     </div>
                 </form>
             </div>
@@ -332,11 +630,50 @@
         </div>
     </div>
 
+    <!-- Sample Details Modal -->
+    <div id="sample-details-modal" class="modal">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-vial"></i> Sample Details</h3>
+                <button class="close-btn" onclick="closeModal('sample-details-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="sample-details-content">
+                    <!-- Sample details will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('sample-details-modal')">Close</button>
+                <button class="btn btn-primary" id="download-sample-btn" onclick="downloadSample()">
+                    <i class="fas fa-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="user-profile-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user"></i> User Profile</h3>
+                <button class="close-btn" onclick="closeModal('user-profile-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="user-profile-content">
+                    <!-- User profile will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('user-profile-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i>
-            <p>Processing...</p>
+            <p id="loading-message">Processing...</p>
         </div>
     </div>
 

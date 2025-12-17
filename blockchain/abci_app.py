@@ -48,6 +48,42 @@ class DNABlockchainApp(BaseApplication):
             'transfer_nft': self._handle_transfer_nft
         }
     
+    def is_healthy(self) -> bool:
+        """Check if the blockchain application is healthy"""
+        try:
+            # Check if all modules are initialized
+            return (
+                self.dna_registry is not None and
+                self.nft_module is not None and
+                self.access_control is not None and
+                self.multisig is not None and
+                self.zkp_handler is not None
+            )
+        except Exception:
+            return False
+    
+    def get_system_stats(self) -> Dict[str, Any]:
+        """Get system statistics"""
+        try:
+            return {
+                'total_samples': self.dna_registry.get_sample_count(),
+                'total_nfts': self.nft_module.get_total_supply(),
+                'pending_requests': len(self.access_control.get_pending_requests()),
+                'verified_proofs': len(self.zkp_handler.get_verified_proofs()),
+                'blockchain_height': self.state['height'],
+                'total_transactions': getattr(self, 'total_transactions', 0)
+            }
+        except Exception as e:
+            return {
+                'total_samples': 0,
+                'total_nfts': 0,
+                'pending_requests': 0,
+                'verified_proofs': 0,
+                'blockchain_height': 0,
+                'total_transactions': 0,
+                'error': str(e)
+            }
+    
     def info(self, req) -> ResponseInfo:
         """Return information about the application"""
         return ResponseInfo(
