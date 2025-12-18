@@ -844,44 +844,7 @@ async def transfer_nft(
         )
 
 
-@app.post("/nft/migrate-ownership", tags=["NFT Management"])
-async def migrate_nft_ownership(current_user: UserProfile = Depends(get_current_user)):
-    """Migrate NFT ownership from email to UID for current user"""
-    try:
-        print(f"🔄 Starting NFT ownership migration for user: {current_user.uid}")
-        
-        if not current_user.email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User email not found"
-            )
-        
-        # Migrate NFTs from email to UID
-        migration_result = firestore_db.migrate_email_to_uid_ownership(
-            current_user.email, 
-            current_user.uid
-        )
-        
-        if migration_result.get('success'):
-            return {
-                'success': True,
-                'message': f"Migration completed successfully",
-                'migrated_count': migration_result.get('migrated', 0),
-                'details': migration_result
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Migration failed: {migration_result.get('error')}"
-            )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Migration failed: {str(e)}"
-        )
+
 
 
 # ============================================================================

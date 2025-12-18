@@ -37,10 +37,10 @@ class DNABlockchainApp {
                 this.auth = window.firebaseAuth;
                 this.db = window.firebaseDb;
                 this.setupAuthStateListener();
-                console.log('✅ Firebase initialized successfully');
+
                 this.showNotification('Firebase authentication ready!', 'success');
             } else if (attempts >= maxAttempts) {
-                console.log('⚠️ Firebase not available, running in demo mode');
+
                 this.showNotification('Running in demo mode - Firebase not configured', 'info');
                 this.auth = null;
                 this.db = null;
@@ -57,13 +57,13 @@ class DNABlockchainApp {
 
     setupAuthStateListener() {
         if (!this.auth || !window.onAuthStateChanged) {
-            console.log('⚠️ Firebase auth not available, skipping auth state listener');
+
             return;
         }
         
         window.onAuthStateChanged(this.auth, async (user) => {
             if (user) {
-                console.log('User signed in:', user);
+
                 
                 // Get Firebase ID token for API authentication
                 try {
@@ -84,7 +84,7 @@ class DNABlockchainApp {
                 this.showMainApp();
                 this.saveUserProfile(user);
             } else {
-                console.log('User signed out');
+
                 this.currentUser = null;
                 this.authToken = null;
                 this.showAuthModal();
@@ -109,13 +109,13 @@ class DNABlockchainApp {
                     createdAt: new Date().toISOString(),
                     lastLogin: new Date().toISOString()
                 });
-                console.log('✅ User profile created in Firestore');
+
             } else {
                 // Update last login
                 await window.setDoc(userRef, {
                     lastLogin: new Date().toISOString()
                 }, { merge: true });
-                console.log('✅ User profile updated in Firestore');
+
             }
         } catch (error) {
             console.error('Error saving user profile:', error);
@@ -206,7 +206,7 @@ class DNABlockchainApp {
 
         if (!this.auth) {
             // Fallback to demo mode
-            console.log('🎭 Using demo mode for login');
+
             await this.handleDemoLogin(email, password, rememberMe);
             return;
         }
@@ -219,7 +219,7 @@ class DNABlockchainApp {
             const userCredential = await window.signInWithEmailAndPassword(this.auth, email, password);
             const user = userCredential.user;
             
-            console.log('✅ Login successful:', user.email);
+
             this.showNotification('Login successful! Welcome back.', 'success');
             
             // Remember me functionality
@@ -290,7 +290,7 @@ class DNABlockchainApp {
 
         if (!this.auth) {
             // Fallback to demo mode
-            console.log('🎭 Using demo mode for registration');
+
             await this.handleDemoRegister(name, email, role, password);
             return;
         }
@@ -322,7 +322,7 @@ class DNABlockchainApp {
                 termsAcceptedAt: new Date().toISOString()
             });
             
-            console.log('✅ Registration successful:', user.email);
+
             this.showNotification('Account created successfully! Welcome to DNA Blockchain.', 'success');
 
         } catch (error) {
@@ -392,11 +392,7 @@ class DNABlockchainApp {
                 ? window.GoogleAuthProvider.credentialFromResult(result)
                 : window.GithubAuthProvider.credentialFromResult(result);
             
-            console.log('✅ Social login successful:', {
-                provider: providerName,
-                email: user.email,
-                name: user.displayName
-            });
+
             
             this.showNotification(`Successfully signed in with ${providerName.charAt(0).toUpperCase() + providerName.slice(1)}!`, 'success');
             
@@ -547,8 +543,8 @@ class DNABlockchainApp {
         try {
             await this.loadDashboardData();
         } catch (error) {
-            console.log('API not available, using demo data');
-            this.loadDemoData();
+
+            this.showNotification('Unable to connect to server', 'error');
         }
         
         // Load initial tab data
@@ -566,7 +562,7 @@ class DNABlockchainApp {
 
     async loadDashboardData() {
         try {
-            console.log('📊 Loading dashboard counts from API...');
+
             
             // Use the dedicated dashboard counts endpoint
             const response = await fetch(`${this.apiBaseUrl}/dashboard/counts`, {
@@ -582,7 +578,7 @@ class DNABlockchainApp {
                 document.getElementById('pending-requests').textContent = data.pending_requests.toString();
                 document.getElementById('verified-proofs').textContent = data.verified_proofs.toString();
                 
-                console.log(`📊 Dashboard updated with REAL counts: ${data.total_samples} samples, ${data.total_nfts} NFTs, ${data.pending_requests} pending, ${data.verified_proofs} proofs`);
+
                 
                 // Show success message if we have real data
                 if (data.total_samples > 0 || data.total_nfts > 0) {
@@ -593,20 +589,12 @@ class DNABlockchainApp {
             }
             
         } catch (error) {
-            console.log('Dashboard API not available, using fallback');
+
             throw error;
         }
     }
 
-    loadDemoData() {
-        // Load demo data when API is not available
-        document.getElementById('total-samples').textContent = '3';
-        document.getElementById('total-nfts').textContent = '2';
-        document.getElementById('pending-requests').textContent = '0';
-        document.getElementById('verified-proofs').textContent = '2';
-        
-        this.showNotification('Running in demo mode - sample data loaded', 'info');
-    }
+
 
     updateUserInterface() {
         if (this.currentUser) {
@@ -661,7 +649,7 @@ class DNABlockchainApp {
             this.authToken = null;
             localStorage.removeItem('dna_remember_user');
             this.showNotification('Successfully logged out', 'success');
-            console.log('✅ User logged out');
+
         } catch (error) {
             console.error('Logout error:', error);
             this.showNotification('Logout failed: ' + error.message, 'error');
@@ -796,7 +784,7 @@ class DNABlockchainApp {
                 throw new Error('API not available');
             }
         } catch (error) {
-            console.log('Loading demo samples data');
+
             this.renderSamples(this.getDemoSamples());
         }
     }
@@ -814,8 +802,8 @@ class DNABlockchainApp {
                 throw new Error('API not available');
             }
         } catch (error) {
-            console.log('Loading demo NFT data');
-            this.renderNFTs(this.getDemoNFTs());
+
+            this.renderNFTs([]);
         }
     }
 
@@ -838,7 +826,7 @@ class DNABlockchainApp {
                 throw new Error('API not available');
             }
         } catch (error) {
-            console.log('Loading demo access requests data');
+
             const demoData = this.getDemoAccessRequests();
             this.renderAccessRequests(demoData.pending, demoData.my);
         }
@@ -857,7 +845,7 @@ class DNABlockchainApp {
                 throw new Error('API not available');
             }
         } catch (error) {
-            console.log('Loading demo ZKP data');
+
             this.renderZKProofs(this.getDemoZKProofs());
         }
     }
@@ -1124,26 +1112,18 @@ class DNABlockchainApp {
                 throw new Error('Activity API not available');
             }
         } catch (error) {
-            console.log('Loading demo activity data');
-            // Fallback to demo data
-            const activities = [
-                { type: 'upload', message: 'DNA sample DNA_001 uploaded', time: '2 hours ago', icon: 'fas fa-upload' },
-                { type: 'nft', message: 'NFT NFT_001 minted successfully', time: '4 hours ago', icon: 'fas fa-certificate' },
-                { type: 'access', message: 'Access request approved for DNA_002', time: '1 day ago', icon: 'fas fa-check' },
-                { type: 'zkp', message: 'Zero-knowledge proof verified', time: '2 days ago', icon: 'fas fa-shield-alt' }
-            ];
-            
-            container.innerHTML = activities.map(activity => `
+
+            container.innerHTML = `
                 <div class="activity-item">
                     <div class="activity-icon">
-                        <i class="${activity.icon}"></i>
+                        <i class="fas fa-exclamation-circle"></i>
                     </div>
                     <div class="activity-content">
-                        <p>${activity.message}</p>
-                        <span class="activity-time">${activity.time}</span>
+                        <p>Unable to load recent activity</p>
+                        <span class="activity-time">Check your connection</span>
                     </div>
                 </div>
-            `).join('');
+            `;
         }
     }
 
@@ -1191,22 +1171,7 @@ class DNABlockchainApp {
         ];
     }
 
-    getDemoNFTs() {
-        return [
-            {
-                token_id: 'NFT_DEMO_001',
-                owner: this.currentUser?.uid,
-                sample_id: 'DNA_DEMO_001',
-                mint_timestamp: Date.now() / 1000 - 86400
-            },
-            {
-                token_id: 'NFT_DEMO_002',
-                owner: this.currentUser?.uid,
-                sample_id: 'DNA_DEMO_002',
-                mint_timestamp: Date.now() / 1000 - 172800
-            }
-        ];
-    }
+
 
     getDemoAccessRequests() {
         return {
@@ -1341,7 +1306,7 @@ function logout() {
     if (app && app.handleLogout) {
         app.handleLogout();
     } else {
-        console.error('App not initialized or logout method not available');
+
     }
 }
 

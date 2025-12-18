@@ -68,7 +68,7 @@ class FirebaseAuth:
         """Register a new user"""
         try:
             if not self.initialized:
-                return self._simulate_registration(registration)
+                return AuthResponse(success=False, error="Firebase not configured")
             
             # Create user in Firebase Auth
             user_record = auth.create_user(
@@ -116,7 +116,7 @@ class FirebaseAuth:
         """Login user (simulation since Firebase Admin SDK doesn't handle client auth)"""
         try:
             if not self.initialized:
-                return self._simulate_login(login)
+                return AuthResponse(success=False, error="Firebase not configured")
             
             # In a real implementation, this would be handled by Firebase client SDK
             # For now, we'll verify the user exists and generate a custom token
@@ -165,8 +165,11 @@ class FirebaseAuth:
         """Verify Firebase token and return user profile"""
         try:
             if not self.initialized:
-                print(f"🔍 Using simulation mode for token: {credentials.credentials[:20]}...")
-                return self._simulate_user_from_token(credentials.credentials)
+                print(f"❌ Firebase not configured")
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Firebase authentication not configured"
+                )
             
             print(f"🔍 Verifying Firebase token: {credentials.credentials[:20]}...")
             
@@ -217,7 +220,7 @@ class FirebaseAuth:
         """Get user profile by UID"""
         try:
             if not self.initialized:
-                return self._simulate_user_profile(uid)
+                return None
             
             user_doc = self.db.collection('users').document(uid).get()
             if user_doc.exists:
@@ -232,8 +235,7 @@ class FirebaseAuth:
         """Get Firebase UID by email address"""
         try:
             if not self.initialized:
-                # Simulate UID from email for demo mode
-                return f"sim_{hashlib.md5(email.encode()).hexdigest()[:8]}"
+                return None
             
             user_record = auth.get_user_by_email(email)
             return user_record.uid
@@ -249,7 +251,7 @@ class FirebaseAuth:
         """Update user profile"""
         try:
             if not self.initialized:
-                return True  # Simulate success
+                return False
             
             self.db.collection('users').document(uid).update(updates)
             return True
@@ -263,86 +265,7 @@ class FirebaseAuth:
         hash_obj = hashlib.sha256(uid.encode())
         return f"0x{hash_obj.hexdigest()[:40]}"
     
-    def _simulate_registration(self, registration: UserRegistration) -> AuthResponse:
-        """Simulate user registration for testing"""
-        uid = f"sim_{hashlib.md5(registration.email.encode()).hexdigest()[:8]}"
-        
-        user_profile = UserProfile(
-            uid=uid,
-            email=registration.email,
-            displayName=registration.display_name,
-            role=registration.role,
-            createdAt=datetime.utcnow(),
-            lastLogin=datetime.utcnow(),
-            wallet_address=self._generate_wallet_address(uid),
-            verified=True
-        )
-        
-        return AuthResponse(
-            success=True,
-            user=user_profile,
-            token=f"sim_token_{uid}",
-            message="User registered successfully (simulation)"
-        )
-    
-    def _simulate_login(self, login: UserLogin) -> AuthResponse:
-        """Simulate user login for testing"""
-        uid = f"sim_{hashlib.md5(login.email.encode()).hexdigest()[:8]}"
-        
-        user_profile = UserProfile(
-            uid=uid,
-            email=login.email,
-            displayName=login.email.split('@')[0].title(),
-            role="user",
-            createdAt=datetime.utcnow() - timedelta(days=30),
-            lastLogin=datetime.utcnow(),
-            wallet_address=self._generate_wallet_address(uid),
-            verified=True
-        )
-        
-        return AuthResponse(
-            success=True,
-            user=user_profile,
-            token=f"sim_token_{uid}",
-            message="Login successful (simulation)"
-        )
-    
-    def _simulate_user_from_token(self, token: str) -> UserProfile:
-        """Simulate user from token for testing"""
-        if not (token.startswith('sim_token_') or token.startswith('demo_token_')):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token format"
-            )
-        
-        if token.startswith('sim_token_'):
-            uid = token.replace('sim_token_', '')
-        else:
-            uid = token.replace('demo_token_', '')
-        
-        return UserProfile(
-            uid=uid,
-            email=f"user_{uid}@example.com",
-            displayName=f"User {uid}",
-            role="user",
-            createdAt=datetime.utcnow() - timedelta(days=30),
-            lastLogin=datetime.utcnow(),
-            wallet_address=self._generate_wallet_address(uid),
-            verified=True
-        )
-    
-    def _simulate_user_profile(self, uid: str) -> UserProfile:
-        """Simulate user profile for testing"""
-        return UserProfile(
-            uid=uid,
-            email=f"user_{uid}@example.com",
-            displayName=f"User {uid}",
-            role="user",
-            createdAt=datetime.utcnow() - timedelta(days=30),
-            lastLogin=datetime.utcnow(),
-            wallet_address=self._generate_wallet_address(uid),
-            verified=True
-        )
+
 
 
 # Global auth instance

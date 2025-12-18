@@ -58,7 +58,7 @@ class FirestoreHandler:
         """Create user profile in Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_user_create(user_id, profile_data)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             # Add timestamps
             profile_data.update({
@@ -87,7 +87,7 @@ class FirestoreHandler:
         """Get user profile from Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_user_get(user_id)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             user_ref = self.db.collection('users').document(user_id)
             user_doc = user_ref.get()
@@ -113,7 +113,7 @@ class FirestoreHandler:
         """Update user profile in Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_user_update(user_id, updates)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             # Add update timestamp
             updates['updated_at'] = firestore.SERVER_TIMESTAMP
@@ -138,8 +138,8 @@ class FirestoreHandler:
         """Store DNA sample metadata in Firestore"""
         try:
             if not self.initialized or self.db is None:
-                print(f"⚠️  Firestore not initialized, using simulation for {sample_id}")
-                return self._simulate_metadata_store(sample_id, metadata)
+                print(f"⚠️  Firestore not initialized")
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             print(f"🔥 Storing sample metadata in Firestore: {sample_id}")
             print(f"🔥 Collection: dna_samples, Document: {sample_id}")
@@ -173,8 +173,8 @@ class FirestoreHandler:
         """Store NFT metadata in separate Firestore collection"""
         try:
             if not self.initialized or self.db is None:
-                print(f"⚠️  Firestore not initialized, using simulation for NFT {token_id}")
-                return self._simulate_metadata_store(token_id, metadata)
+                print(f"⚠️  Firestore not initialized")
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             print(f"🎨 Storing NFT metadata in Firestore: {token_id}")
             print(f"🎨 Collection: nft_tokens, Document: {token_id}")
@@ -208,8 +208,8 @@ class FirestoreHandler:
         """Query NFT tokens by owner (supports both UID and email lookup)"""
         try:
             if not self.initialized or self.db is None:
-                print(f"⚠️  Firestore not initialized, using simulation for NFT owner: {owner_id}")
-                return self._simulate_nfts_query(owner_id)
+                print(f"⚠️  Firestore not initialized")
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             print(f"🎨 Querying Firestore for NFTs by owner_uid: {owner_id}")
             nfts_ref = self.db.collection('nft_tokens')
@@ -259,40 +259,7 @@ class FirestoreHandler:
                 'error': f'NFT query failed: {str(e)}'
             }
     
-    def _simulate_nfts_query(self, owner_id: str) -> Dict[str, Any]:
-        """Simulate NFT query for demo mode"""
-        return {
-            'success': True,
-            'nfts': [
-                {
-                    'token_id': 'NFT_001',
-                    'owner_uid': owner_id,
-                    'sample_id': 'DNA_NFT_001',  # Always include sample_id
-                    'metadata_uri': 'https://example.com/nft/1',
-                    'mint_timestamp': int(time.time()),
-                    'created_at': time.time(),
-                    'simulated': True
-                }
-            ],
-            'count': 1,
-            'simulated': True
-        }
-    
-    def _simulate_nft_get(self, token_id: str) -> Dict[str, Any]:
-        """Simulate NFT metadata get for demo mode"""
-        return {
-            'success': True,
-            'metadata': {
-                'token_id': token_id,
-                'owner_uid': 'demo_user',
-                'sample_id': f'DNA_{token_id}',  # Always include sample_id
-                'metadata_uri': 'https://example.com/nft/metadata',
-                'mint_timestamp': int(time.time()),
-                'created_at': time.time(),
-                'simulated': True
-            },
-            'simulated': True
-        }
+
     
     def store_access_request(self, request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Store access request in Firestore"""
@@ -328,55 +295,13 @@ class FirestoreHandler:
                 'error': f'Access request storage failed: {str(e)}'
             }
     
-    def migrate_email_to_uid_ownership(self, email: str, uid: str) -> Dict[str, Any]:
-        """Migrate NFT ownership from email to UID"""
-        try:
-            if not self.initialized or self.db is None:
-                print(f"⚠️  Firestore not initialized, skipping migration")
-                return {'success': True, 'migrated': 0, 'simulated': True}
-            
-            print(f"🔄 Migrating NFT ownership from email {email} to UID {uid}")
-            
-            # Find NFTs owned by email
-            nfts_ref = self.db.collection('nft_tokens')
-            email_query = nfts_ref.where(filter=firestore.FieldFilter('owner', '==', email))
-            docs = list(email_query.stream())
-            
-            migrated_count = 0
-            for doc in docs:
-                try:
-                    # Update the document to use UID instead of email
-                    doc.reference.update({
-                        'owner_uid': uid,
-                        'owner': uid,  # Update both fields
-                        'migrated_from_email': email,
-                        'migration_timestamp': firestore.SERVER_TIMESTAMP
-                    })
-                    migrated_count += 1
-                    print(f"✅ Migrated NFT {doc.id} from email to UID")
-                except Exception as e:
-                    print(f"❌ Failed to migrate NFT {doc.id}: {e}")
-            
-            print(f"🔄 Migration complete: {migrated_count} NFTs migrated")
-            
-            return {
-                'success': True,
-                'migrated': migrated_count,
-                'message': f'Successfully migrated {migrated_count} NFTs from email to UID'
-            }
-            
-        except Exception as e:
-            print(f"❌ Migration failed: {str(e)}")
-            return {
-                'success': False,
-                'error': f'Migration failed: {str(e)}'
-            }
+
 
     def get_sample_metadata(self, sample_id: str) -> Dict[str, Any]:
         """Get DNA sample metadata from Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_metadata_get(sample_id)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             sample_ref = self.db.collection('dna_samples').document(sample_id)
             sample_doc = sample_ref.get()
@@ -402,8 +327,8 @@ class FirestoreHandler:
         """Query DNA samples by owner"""
         try:
             if not self.initialized or self.db is None:
-                print(f"⚠️  Firestore not initialized, using simulation for owner: {owner_id}")
-                return self._simulate_samples_query(owner_id)
+                print(f"⚠️  Firestore not initialized")
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             print(f"🔥 Querying Firestore for samples by owner_uid: {owner_id}")
             samples_ref = self.db.collection('dna_samples')
@@ -436,7 +361,7 @@ class FirestoreHandler:
         """Get NFT metadata from Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_nft_get(token_id)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             nft_ref = self.db.collection('nft_tokens').document(token_id)
             nft_doc = nft_ref.get()
@@ -463,7 +388,7 @@ class FirestoreHandler:
         """Log access event to Firestore"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_access_log(event_data)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             # Add timestamp
             event_data['timestamp'] = firestore.SERVER_TIMESTAMP
@@ -490,7 +415,7 @@ class FirestoreHandler:
         """Get access logs with optional filtering"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_access_logs_get(sample_id, user_id, limit)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             logs_ref = self.db.collection('access_logs')
             query = logs_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
@@ -528,7 +453,7 @@ class FirestoreHandler:
         """Store analytics event"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_analytics_store(event_type, event_data)
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             # Prepare analytics document
             analytics_data = {
@@ -557,7 +482,7 @@ class FirestoreHandler:
         """Get system statistics"""
         try:
             if not self.initialized or self.db is None:
-                return self._simulate_system_stats()
+                return {'success': False, 'error': 'Firestore not initialized'}
             
             stats = {}
             
@@ -589,129 +514,7 @@ class FirestoreHandler:
                 'error': f'Stats retrieval failed: {str(e)}'
             }
     
-    # Simulation methods for demo mode
-    def _simulate_user_create(self, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'user_id': user_id,
-            'message': 'User profile created successfully (simulated)',
-            'simulated': True
-        }
-    
-    def _simulate_user_get(self, user_id: str) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'user_data': {
-                'user_id': user_id,
-                'name': f'User {user_id}',
-                'email': f'{user_id}@example.com',
-                'role': 'researcher',
-                'created_at': datetime.utcnow().isoformat(),
-                'active': True,
-                'simulated': True
-            },
-            'simulated': True
-        }
-    
-    def _simulate_user_update(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'user_id': user_id,
-            'message': 'User profile updated successfully (simulated)',
-            'simulated': True
-        }
-    
-    def _simulate_metadata_store(self, sample_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'sample_id': sample_id,
-            'message': 'Sample metadata stored successfully (simulated)',
-            'simulated': True
-        }
-    
-    def _simulate_metadata_get(self, sample_id: str) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'metadata': {
-                'sample_id': sample_id,
-                'type': 'saliva',
-                'collection_date': '2024-12-15',
-                'patient_id': 'PATIENT_001',
-                'encrypted': True,
-                'file_path': f'samples/{sample_id}.encrypted',
-                'created_at': datetime.utcnow().isoformat(),
-                'simulated': True
-            },
-            'simulated': True
-        }
-    
-    def _simulate_samples_query(self, owner_id: str) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'samples': [
-                {
-                    'sample_id': 'DNA_001',
-                    'owner': owner_id,
-                    'type': 'saliva',
-                    'created_at': datetime.utcnow().isoformat(),
-                    'simulated': True
-                },
-                {
-                    'sample_id': 'DNA_002',
-                    'owner': owner_id,
-                    'type': 'blood',
-                    'created_at': datetime.utcnow().isoformat(),
-                    'simulated': True
-                }
-            ],
-            'count': 2,
-            'simulated': True
-        }
-    
-    def _simulate_access_log(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'event_id': f"access_{int(time.time() * 1000)}",
-            'message': 'Access event logged successfully (simulated)',
-            'simulated': True
-        }
-    
-    def _simulate_access_logs_get(self, sample_id: Optional[str], user_id: Optional[str], limit: int) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'logs': [
-                {
-                    'log_id': 'log_001',
-                    'event_type': 'access_granted',
-                    'sample_id': sample_id or 'DNA_001',
-                    'user_id': user_id or 'researcher_001',
-                    'timestamp': datetime.utcnow().isoformat(),
-                    'simulated': True
-                }
-            ],
-            'count': 1,
-            'simulated': True
-        }
-    
-    def _simulate_analytics_store(self, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'message': 'Analytics event stored successfully (simulated)',
-            'simulated': True
-        }
-    
-    def _simulate_system_stats(self) -> Dict[str, Any]:
-        return {
-            'success': True,
-            'stats': {
-                'total_users': 25,
-                'total_samples': 150,
-                'recent_access_events': 45,
-                'simulated': True
-            },
-            'generated_at': datetime.utcnow().isoformat(),
-            'simulated': True
-        }
+
 
 
 # Add missing import

@@ -264,8 +264,6 @@ async function refreshDashboard() {
     } catch (error) {
         console.error('Dashboard refresh failed:', error);
         app.showNotification('Failed to refresh dashboard', 'error');
-        // Load demo data as fallback
-        app.loadDemoData();
     }
 }
 
@@ -282,38 +280,9 @@ async function refreshAccessRequests() {
     }
 }
 
-async function migrateNFTOwnership() {
-    if (!app) return;
-    
-    const confirmed = confirm('This will migrate any NFTs transferred to your email address to be properly owned by your account. Continue?');
-    if (!confirmed) return;
-    
-    try {
-        app.showNotification('Migrating NFT ownership...', 'info');
-        
-        const response = await fetch(`${app.apiBaseUrl}/nft/migrate-ownership`, {
-            method: 'POST',
-            headers: app.getAuthHeaders()
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            app.showNotification(`Migration completed! ${result.migrated_count} NFTs migrated.`, 'success');
-            // Refresh NFTs list
-            await app.loadNFTs();
-        } else {
-            const error = await response.json();
-            app.showNotification(`Migration failed: ${error.detail || 'Unknown error'}`, 'error');
-        }
-        
-    } catch (error) {
-        console.error('Migration error:', error);
-        app.showNotification(`Migration failed: ${error.message}`, 'error');
-    }
-}
+
 function viewProofDetails(proofId) {
     // Force create and show the modal immediately
-    console.log('viewProofDetails called with:', proofId);
     
     // Remove any existing modals first
     const existingModals = document.querySelectorAll('.modal-overlay');
@@ -513,6 +482,4 @@ function viewProofDetails(proofId) {
     if (app) {
         app.showNotification('Proof details opened', 'success');
     }
-    
-    console.log('Modal added to DOM');
 }

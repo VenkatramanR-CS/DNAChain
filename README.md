@@ -1,8 +1,8 @@
-# DNA Blockchain Access System MVP
+# DNA Blockchain Access System
 
 A secure, decentralized system for DNA sample storage and access control using blockchain, zero-knowledge proofs, and encrypted storage.
 
-## 🎉 Current Status: COMPLETE PRODUCTION-READY SYSTEM
+## 🎉 Current Status: PRODUCTION-READY SYSTEM
 
 ✅ **Blockchain Layer**: Complete ABCI application with all modules  
 ✅ **Encryption Layer**: AES-256 encryption with key management  
@@ -12,7 +12,6 @@ A secure, decentralized system for DNA sample storage and access control using b
 ✅ **ZKP Layer**: Zero-knowledge proof generation and verification  
 ✅ **Firebase Integration**: Cloud storage and Firestore database  
 ✅ **Frontend Application**: Complete web interface  
-✅ **Advanced Features**: Analytics, monitoring, and audit logging  
 
 ## Architecture Overview
 
@@ -54,14 +53,7 @@ python scripts/start_full_system.py
 - **System Status**: http://localhost:8000/system/full-status
 - **Health Check**: http://localhost:8000/health
 
-### 5. Run Demos
-```bash
-# Advanced feature demo
-python demo_advanced.py
 
-# Interactive demo
-python demo.py
-```
 
 ## 📋 Available Endpoints (25+ Total)
 
@@ -105,15 +97,16 @@ python demo.py
 
 ## 🧪 Testing
 
-The system includes comprehensive tests for all components:
+Test individual components:
 
 ```bash
-# Run full test suite
-python scripts/test_system.py
-
-# Test individual components
+# Test blockchain
 python -c "from blockchain.abci_app import DNABlockchainApp; print('Blockchain: OK')"
+
+# Test encryption
 python -c "from encryption.aes_crypto import AESCrypto; print('Encryption: OK')"
+
+# Test API
 python -c "from api.main import app; print('API: OK')"
 ```
 
@@ -135,14 +128,13 @@ python -c "from api.main import app; print('API: OK')"
 ### 3. Firebase Integration (✅ Complete)
 - **Cloud Storage**: Encrypted file storage in Firebase
 - **Firestore Database**: Metadata and user profile management
+- **User Authentication**: Firebase Auth integration
 - **Analytics**: System usage and access logging
-- **Simulation Mode**: Works without Firebase credentials
 
 ### 4. Zero-Knowledge Proofs (✅ Complete)
 - **Noir Circuits**: Access permission and identity verification
 - **Proof Generation**: Privacy-preserving authentication
 - **Batch Verification**: Efficient multi-proof validation
-- **Simulation Mode**: Works without Noir installation
 
 ### 5. API Layer (✅ Complete)
 - **FastAPI Server**: 25+ RESTful endpoints

@@ -117,7 +117,7 @@ class FirebaseStorageHandler:
         """Upload encrypted file to Firebase Storage"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_upload(file_data, file_path, metadata)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # Create blob reference
             blob = self.bucket.blob(file_path)
@@ -161,7 +161,7 @@ class FirebaseStorageHandler:
         """Download encrypted file from Firebase Storage"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_download(file_path)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # Get blob reference
             blob = self.bucket.blob(file_path)
@@ -203,7 +203,7 @@ class FirebaseStorageHandler:
         """Delete file from Firebase Storage"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_delete(file_path)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # Get blob reference
             blob = self.bucket.blob(file_path)
@@ -234,7 +234,7 @@ class FirebaseStorageHandler:
         """List files in Firebase Storage"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_list(prefix, limit)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # List blobs with prefix
             blobs = self.bucket.list_blobs(prefix=prefix, max_results=limit)
@@ -267,7 +267,7 @@ class FirebaseStorageHandler:
         """Get file metadata without downloading"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_metadata(file_path)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # Get blob reference
             blob = self.bucket.blob(file_path)
@@ -303,7 +303,7 @@ class FirebaseStorageHandler:
         """Generate signed URL for direct upload"""
         try:
             if not self.initialized or self.bucket is None:
-                return self._simulate_upload_url(file_path, expiration_hours)
+                return {'success': False, 'error': 'Firebase Storage not initialized'}
             
             # Create blob reference
             blob = self.bucket.blob(file_path)
@@ -329,96 +329,3 @@ class FirebaseStorageHandler:
                 'error': f'URL generation failed: {str(e)}'
             }
     
-    def _simulate_upload(self, file_data: bytes, file_path: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Simulate file upload for demo mode"""
-        file_hash = hashlib.sha256(file_data).hexdigest()
-        return {
-            'success': True,
-            'file_path': file_path,
-            'download_url': f'https://simulated-storage.com/{file_path}',
-            'file_hash': file_hash,
-            'file_size': len(file_data),
-            'upload_time': datetime.utcnow().isoformat(),
-            'metadata': metadata or {},
-            'simulated': True
-        }
-    
-    def _simulate_download(self, file_path: str) -> Dict[str, Any]:
-        """Simulate file download for demo mode"""
-        # Simulate some DNA data
-        simulated_data = b"SIMULATED_ENCRYPTED_DNA_DATA_" + file_path.encode()
-        file_hash = hashlib.sha256(simulated_data).hexdigest()
-        
-        return {
-            'success': True,
-            'file_data': simulated_data,
-            'file_path': file_path,
-            'file_hash': file_hash,
-            'file_size': len(simulated_data),
-            'metadata': {'simulated': True},
-            'last_modified': datetime.utcnow().isoformat(),
-            'simulated': True
-        }
-    
-    def _simulate_delete(self, file_path: str) -> Dict[str, Any]:
-        """Simulate file deletion for demo mode"""
-        return {
-            'success': True,
-            'message': f'File deleted (simulated): {file_path}',
-            'deleted_at': datetime.utcnow().isoformat(),
-            'simulated': True
-        }
-    
-    def _simulate_list(self, prefix: str, limit: int) -> Dict[str, Any]:
-        """Simulate file listing for demo mode"""
-        simulated_files = [
-            {
-                'name': f'{prefix}sample_001.encrypted',
-                'size': 1024,
-                'created': datetime.utcnow().isoformat(),
-                'updated': datetime.utcnow().isoformat(),
-                'content_type': 'application/octet-stream',
-                'metadata': {'sample_id': 'DNA_001', 'encrypted': True}
-            },
-            {
-                'name': f'{prefix}sample_002.encrypted',
-                'size': 2048,
-                'created': datetime.utcnow().isoformat(),
-                'updated': datetime.utcnow().isoformat(),
-                'content_type': 'application/octet-stream',
-                'metadata': {'sample_id': 'DNA_002', 'encrypted': True}
-            }
-        ]
-        
-        return {
-            'success': True,
-            'files': simulated_files,
-            'count': len(simulated_files),
-            'prefix': prefix,
-            'simulated': True
-        }
-    
-    def _simulate_metadata(self, file_path: str) -> Dict[str, Any]:
-        """Simulate metadata retrieval for demo mode"""
-        return {
-            'success': True,
-            'file_path': file_path,
-            'size': 1024,
-            'content_type': 'application/octet-stream',
-            'created': datetime.utcnow().isoformat(),
-            'updated': datetime.utcnow().isoformat(),
-            'metadata': {'simulated': True},
-            'etag': 'simulated-etag-123',
-            'simulated': True
-        }
-    
-    def _simulate_upload_url(self, file_path: str, expiration_hours: int) -> Dict[str, Any]:
-        """Simulate upload URL generation for demo mode"""
-        return {
-            'success': True,
-            'upload_url': f'https://simulated-storage.com/upload/{file_path}',
-            'file_path': file_path,
-            'expires_at': (datetime.utcnow() + timedelta(hours=expiration_hours)).isoformat(),
-            'method': 'PUT',
-            'simulated': True
-        }
