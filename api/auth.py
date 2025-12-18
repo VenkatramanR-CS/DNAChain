@@ -10,8 +10,8 @@ from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from functools import wraps
 
-import firebase_admin
-from firebase_admin import credentials, auth, firestore
+import firebase_admin  # type: ignore
+from firebase_admin import credentials, auth, firestore  # type: ignore
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -32,7 +32,7 @@ class FirebaseAuth:
         try:
             # Check if Firebase is already initialized
             if not firebase_admin._apps:
-                config_path = os.path.join(os.path.dirname(__file__), '..', 'firebase', 'config.json')
+                config_path = os.path.join(os.path.dirname(__file__), '..', 'dna_firebase', 'config.json')
                 
                 if os.path.exists(config_path):
                     # Load Firebase config
@@ -40,14 +40,16 @@ class FirebaseAuth:
                         config_data = json.load(f)
                     
                     # Check if it's a real config (not placeholder)
-                    if config_data.get('project_id') != 'dna-blockchain-system' or 'YOUR_PRIVATE_KEY_HERE' in config_data.get('private_key', ''):
+                    if config_data.get('project_id') == 'dna-blockchain-system' or 'YOUR_PRIVATE_KEY_HERE' in config_data.get('private_key', ''):
                         print("⚠️  Firebase config contains placeholder data. Running in simulation mode.")
                         self.initialized = False
                         return
                     
-                    # Initialize with service account
+                    # Initialize with service account and storage bucket
                     cred = credentials.Certificate(config_path)
-                    firebase_admin.initialize_app(cred)
+                    firebase_admin.initialize_app(cred, {
+                        'storageBucket': f"{config_data.get('project_id')}.firebasestorage.app"
+                    })
                     self.db = firestore.client()
                     self.initialized = True
                     print("✅ Firebase initialized successfully")
@@ -163,23 +165,49 @@ class FirebaseAuth:
         """Verify Firebase token and return user profile"""
         try:
             if not self.initialized:
+                print(f"🔍 Using simulation mode for token: {credentials.credentials[:20]}...")
                 return self._simulate_user_from_token(credentials.credentials)
+            
+            print(f"🔍 Verifying Firebase token: {credentials.credentials[:20]}...")
             
             # Verify the token
             decoded_token = auth.verify_id_token(credentials.credentials)
             uid = decoded_token['uid']
+            print(f"✅ Token verified for user: {uid}")
             
             # Get user profile
-            user_doc = self.db.collection('users').document(uid).get()
-            if not user_doc.exists:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="User profile not found"
+            if self.db is None:
+                print("⚠️ Firestore not available, creating basic profile")
+                return UserProfile(
+                    uid=uid,
+                    email=decoded_token.get('email', f'{uid}@firebase.user'),
+                    displayName=decoded_token.get('name', f'User {uid}'),
+                    role='user',
+                    createdAt=datetime.utcnow(),
+                    lastLogin=datetime.utcnow(),
+                    wallet_address=self._generate_wallet_address(uid),
+                    verified=True
                 )
             
+            user_doc = self.db.collection('users').document(uid).get()
+            if not user_doc.exists:
+                print(f"⚠️ User profile not found in Firestore, creating basic profile for {uid}")
+                return UserProfile(
+                    uid=uid,
+                    email=decoded_token.get('email', f'{uid}@firebase.user'),
+                    displayName=decoded_token.get('name', f'User {uid}'),
+                    role='user',
+                    createdAt=datetime.utcnow(),
+                    lastLogin=datetime.utcnow(),
+                    wallet_address=self._generate_wallet_address(uid),
+                    verified=True
+                )
+            
+            print(f"✅ User profile found in Firestore for {uid}")
             return UserProfile(**user_doc.to_dict())
             
         except Exception as e:
+            print(f"❌ Token verification failed: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token: {str(e)}"
@@ -198,6 +226,23 @@ class FirebaseAuth:
             
         except Exception as e:
             print(f"Error getting user profile: {e}")
+            return None
+    
+    async def get_uid_by_email(self, email: str) -> Optional[str]:
+        """Get Firebase UID by email address"""
+        try:
+            if not self.initialized:
+                # Simulate UID from email for demo mode
+                return f"sim_{hashlib.md5(email.encode()).hexdigest()[:8]}"
+            
+            user_record = auth.get_user_by_email(email)
+            return user_record.uid
+            
+        except auth.UserNotFoundError:
+            print(f"User not found for email: {email}")
+            return None
+        except Exception as e:
+            print(f"Error getting UID by email: {e}")
             return None
     
     async def update_user_profile(self, uid: str, updates: Dict[str, Any]) -> bool:
@@ -225,9 +270,10 @@ class FirebaseAuth:
         user_profile = UserProfile(
             uid=uid,
             email=registration.email,
-            display_name=registration.display_name,
+            displayName=registration.display_name,
             role=registration.role,
-            created_at=datetime.utcnow(),
+            createdAt=datetime.utcnow(),
+            lastLogin=datetime.utcnow(),
             wallet_address=self._generate_wallet_address(uid),
             verified=True
         )
@@ -246,10 +292,10 @@ class FirebaseAuth:
         user_profile = UserProfile(
             uid=uid,
             email=login.email,
-            display_name=login.email.split('@')[0].title(),
+            displayName=login.email.split('@')[0].title(),
             role="user",
-            created_at=datetime.utcnow() - timedelta(days=30),
-            last_login=datetime.utcnow(),
+            createdAt=datetime.utcnow() - timedelta(days=30),
+            lastLogin=datetime.utcnow(),
             wallet_address=self._generate_wallet_address(uid),
             verified=True
         )
@@ -277,10 +323,10 @@ class FirebaseAuth:
         return UserProfile(
             uid=uid,
             email=f"user_{uid}@example.com",
-            display_name=f"User {uid}",
+            displayName=f"User {uid}",
             role="user",
-            created_at=datetime.utcnow() - timedelta(days=30),
-            last_login=datetime.utcnow(),
+            createdAt=datetime.utcnow() - timedelta(days=30),
+            lastLogin=datetime.utcnow(),
             wallet_address=self._generate_wallet_address(uid),
             verified=True
         )
@@ -290,9 +336,10 @@ class FirebaseAuth:
         return UserProfile(
             uid=uid,
             email=f"user_{uid}@example.com",
-            display_name=f"User {uid}",
+            displayName=f"User {uid}",
             role="user",
-            created_at=datetime.utcnow() - timedelta(days=30),
+            createdAt=datetime.utcnow() - timedelta(days=30),
+            lastLogin=datetime.utcnow(),
             wallet_address=self._generate_wallet_address(uid),
             verified=True
         )
@@ -311,6 +358,6 @@ def require_auth(func):
     return wrapper
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
     """FastAPI dependency to get current user"""
-    return firebase_auth.verify_token(credentials)
+    return await firebase_auth.verify_token(credentials)

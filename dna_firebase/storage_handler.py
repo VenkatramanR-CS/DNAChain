@@ -9,9 +9,9 @@ import hashlib
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 try:
-    import firebase_admin
-    from firebase_admin import credentials, storage
-    from google.cloud import storage as gcs
+    import firebase_admin  # type: ignore
+    from firebase_admin import credentials, storage  # type: ignore
+    from google.cloud import storage as gcs  # type: ignore
     FIREBASE_AVAILABLE = True
 except ImportError:
     FIREBASE_AVAILABLE = False
@@ -21,9 +21,9 @@ except ImportError:
 class FirebaseStorageHandler:
     """Firebase Cloud Storage handler for DNA files"""
     
-    def __init__(self, config_path: str = "firebase/config.json", bucket_name: str = None):
+    def __init__(self, config_path: str = "dna_firebase/config.json", bucket_name: Optional[str] = None):
         self.config_path = config_path
-        self.bucket_name = bucket_name or "dna-blockchain-system.appspot.com"
+        self.bucket_name = bucket_name or "dnachain-643f8.appspot.com"  # Try default bucket format
         self.bucket = None
         self.initialized = False
         
@@ -38,30 +38,85 @@ class FirebaseStorageHandler:
                 self.initialized = False
                 return
                 
+            # Check if Firebase is already initialized (by auth module)
+            if firebase_admin._apps:
+                # Firebase already initialized, just get the storage bucket
+                try:
+                    # Try to get the bucket with error handling for version conflicts
+                    self.bucket = storage.bucket()
+                    self.initialized = True
+                    print("✅ Firebase Storage connected to existing app")
+                    return
+                except Exception as e:
+                    # Handle specific version conflicts gracefully
+                    error_msg = str(e).lower()
+                    if 'extra_headers' in error_msg or 'unexpected keyword argument' in error_msg:
+                        print(f"⚠️  Firebase Storage version conflict detected: {e}")
+                        print("📝 This is likely due to Firebase Admin SDK version compatibility")
+                        print("📝 Running storage in simulation mode")
+                    else:
+                        print(f"⚠️  Firebase Storage connection failed: {e}")
+                        print("📝 Running storage in simulation mode")
+                    self.initialized = False
+                    return
+            
+            # Firebase not initialized yet, initialize it
             if os.path.exists(self.config_path):
-                # Production: Use service account key
-                cred = credentials.Certificate(self.config_path)
-                if not firebase_admin._apps:
-                    firebase_admin.initialize_app(cred, {
-                        'storageBucket': self.bucket_name
-                    })
-                self.bucket = storage.bucket()
-                self.initialized = True
-                print("✅ Firebase initialized with service account")
+                try:
+                    cred = credentials.Certificate(self.config_path)
+                    
+                    # Try different bucket name formats
+                    bucket_names = [
+                        "dnachain-643f8.appspot.com",
+                        "dnachain-643f8.firebasestorage.app", 
+                        "dnachain-643f8"
+                    ]
+                    
+                    for bucket_name in bucket_names:
+                        try:
+                            firebase_admin.initialize_app(cred, {
+                                'storageBucket': bucket_name
+                            })
+                            self.bucket = storage.bucket()
+                            self.bucket_name = bucket_name
+                            self.initialized = True
+                            print(f"✅ Firebase Storage initialized successfully with bucket: {bucket_name}")
+                            return
+                        except Exception as bucket_error:
+                            print(f"⚠️  Failed to connect to bucket {bucket_name}: {bucket_error}")
+                            # Reset Firebase app for next attempt
+                            if firebase_admin._apps:
+                                del firebase_admin._apps[firebase_admin._DEFAULT_APP_NAME]
+                            continue
+                    
+                    # If all bucket attempts failed
+                    raise Exception("All bucket name attempts failed")
+                except Exception as init_error:
+                    # Handle specific version conflicts gracefully
+                    error_msg = str(init_error).lower()
+                    if 'extra_headers' in error_msg or 'unexpected keyword argument' in error_msg:
+                        print(f"⚠️  Firebase Storage version conflict detected: {init_error}")
+                        print("📝 This is likely due to Firebase Admin SDK version compatibility")
+                        print("📝 Running storage in simulation mode")
+                    else:
+                        print(f"⚠️  Firebase Storage initialization failed: {init_error}")
+                        print("📝 Running storage in simulation mode")
+                    self.initialized = False
             else:
                 # Demo mode: Simulate Firebase
                 print("⚠️  Firebase config not found - running in simulation mode")
                 self.initialized = False
+                
         except Exception as e:
             print(f"⚠️  Firebase initialization failed: {e}")
             print("📝 Running in simulation mode")
             self.initialized = False
     
     def upload_encrypted_file(self, file_data: bytes, file_path: str, 
-                            metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+                            metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Upload encrypted file to Firebase Storage"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_upload(file_data, file_path, metadata)
             
             # Create blob reference
@@ -71,11 +126,11 @@ class FirebaseStorageHandler:
             if metadata:
                 blob.metadata = metadata
             
-            # Set content type for encrypted files
-            blob.content_type = 'application/octet-stream'
-            
-            # Upload file
-            blob.upload_from_string(file_data)
+            # Upload file with correct content type
+            blob.upload_from_string(
+                file_data,
+                content_type='application/octet-stream'
+            )
             
             # Generate download URL (with expiration)
             download_url = blob.generate_signed_url(
@@ -105,7 +160,7 @@ class FirebaseStorageHandler:
     def download_encrypted_file(self, file_path: str) -> Dict[str, Any]:
         """Download encrypted file from Firebase Storage"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_download(file_path)
             
             # Get blob reference
@@ -147,7 +202,7 @@ class FirebaseStorageHandler:
     def delete_file(self, file_path: str) -> Dict[str, Any]:
         """Delete file from Firebase Storage"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_delete(file_path)
             
             # Get blob reference
@@ -178,7 +233,7 @@ class FirebaseStorageHandler:
     def list_files(self, prefix: str = "", limit: int = 100) -> Dict[str, Any]:
         """List files in Firebase Storage"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_list(prefix, limit)
             
             # List blobs with prefix
@@ -211,7 +266,7 @@ class FirebaseStorageHandler:
     def get_file_metadata(self, file_path: str) -> Dict[str, Any]:
         """Get file metadata without downloading"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_metadata(file_path)
             
             # Get blob reference
@@ -247,7 +302,7 @@ class FirebaseStorageHandler:
     def generate_upload_url(self, file_path: str, expiration_hours: int = 1) -> Dict[str, Any]:
         """Generate signed URL for direct upload"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.bucket is None:
                 return self._simulate_upload_url(file_path, expiration_hours)
             
             # Create blob reference
@@ -274,7 +329,7 @@ class FirebaseStorageHandler:
                 'error': f'URL generation failed: {str(e)}'
             }
     
-    def _simulate_upload(self, file_data: bytes, file_path: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _simulate_upload(self, file_data: bytes, file_path: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Simulate file upload for demo mode"""
         file_hash = hashlib.sha256(file_data).hexdigest()
         return {

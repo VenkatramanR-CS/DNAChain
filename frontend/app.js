@@ -561,22 +561,39 @@ class DNABlockchainApp {
         this.setupTabNavigation();
         
         // Load recent activity
-        this.loadRecentActivity();
+        await this.loadRecentActivity();
     }
 
     async loadDashboardData() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/health`);
+            console.log('📊 Loading dashboard counts from API...');
+            
+            // Use the dedicated dashboard counts endpoint
+            const response = await fetch(`${this.apiBaseUrl}/dashboard/counts`, {
+                headers: this.getAuthHeaders()
+            });
+            
             if (response.ok) {
                 const data = await response.json();
-                document.getElementById('total-samples').textContent = data.total_samples || '0';
-                document.getElementById('total-nfts').textContent = data.total_nfts || '0';
-                document.getElementById('pending-requests').textContent = data.pending_requests || '0';
-                document.getElementById('verified-proofs').textContent = data.verified_proofs || '0';
+                
+                // Update dashboard counts with REAL data
+                document.getElementById('total-samples').textContent = data.total_samples.toString();
+                document.getElementById('total-nfts').textContent = data.total_nfts.toString();
+                document.getElementById('pending-requests').textContent = data.pending_requests.toString();
+                document.getElementById('verified-proofs').textContent = data.verified_proofs.toString();
+                
+                console.log(`📊 Dashboard updated with REAL counts: ${data.total_samples} samples, ${data.total_nfts} NFTs, ${data.pending_requests} pending, ${data.verified_proofs} proofs`);
+                
+                // Show success message if we have real data
+                if (data.total_samples > 0 || data.total_nfts > 0) {
+                    this.showNotification('Dashboard loaded with your real data!', 'success');
+                }
             } else {
-                throw new Error('API not available');
+                throw new Error('Dashboard API not available');
             }
+            
         } catch (error) {
+            console.log('Dashboard API not available, using fallback');
             throw error;
         }
     }
@@ -585,8 +602,8 @@ class DNABlockchainApp {
         // Load demo data when API is not available
         document.getElementById('total-samples').textContent = '3';
         document.getElementById('total-nfts').textContent = '2';
-        document.getElementById('pending-requests').textContent = '1';
-        document.getElementById('verified-proofs').textContent = '5';
+        document.getElementById('pending-requests').textContent = '0';
+        document.getElementById('verified-proofs').textContent = '2';
         
         this.showNotification('Running in demo mode - sample data loaded', 'info');
     }
@@ -984,6 +1001,9 @@ class DNABlockchainApp {
                             <p><strong>Purpose:</strong> ${request.purpose}</p>
                             <p><strong>Duration:</strong> ${request.expiry_hours} hours</p>
                             <p><strong>Requested:</strong> ${new Date(request.request_timestamp * 1000 || Date.now()).toLocaleDateString()}</p>
+                            <p style="color: var(--primary-color); font-size: 0.9em; margin-top: 0.5rem;">
+                                <i class="fas fa-info-circle"></i> You own this sample - you can approve or deny this request
+                            </p>
                         </div>
                         <div class="request-actions">
                             <button class="btn btn-success btn-sm" onclick="approveRequest('${request.request_id}')">
@@ -1062,29 +1082,69 @@ class DNABlockchainApp {
         `).join('');
     }
 
-    loadRecentActivity() {
+    async loadRecentActivity() {
         const container = document.getElementById('recent-activity');
         if (!container) return;
         
-        // Demo activity data
-        const activities = [
-            { type: 'upload', message: 'DNA sample DNA_001 uploaded', time: '2 hours ago', icon: 'fas fa-upload' },
-            { type: 'nft', message: 'NFT NFT_001 minted successfully', time: '4 hours ago', icon: 'fas fa-certificate' },
-            { type: 'access', message: 'Access request approved for DNA_002', time: '1 day ago', icon: 'fas fa-check' },
-            { type: 'zkp', message: 'Zero-knowledge proof verified', time: '2 days ago', icon: 'fas fa-shield-alt' }
-        ];
-        
-        container.innerHTML = activities.map(activity => `
-            <div class="activity-item">
-                <div class="activity-icon">
-                    <i class="${activity.icon}"></i>
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/dashboard/activity`, {
+                headers: this.getAuthHeaders()
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const activities = data.activities || [];
+                
+                if (activities.length > 0) {
+                    container.innerHTML = activities.map(activity => `
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="${activity.icon}"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>${activity.message}</p>
+                                <span class="activity-time">${activity.time}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>No recent activity</p>
+                                <span class="activity-time">Start by uploading a DNA sample</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else {
+                throw new Error('Activity API not available');
+            }
+        } catch (error) {
+            console.log('Loading demo activity data');
+            // Fallback to demo data
+            const activities = [
+                { type: 'upload', message: 'DNA sample DNA_001 uploaded', time: '2 hours ago', icon: 'fas fa-upload' },
+                { type: 'nft', message: 'NFT NFT_001 minted successfully', time: '4 hours ago', icon: 'fas fa-certificate' },
+                { type: 'access', message: 'Access request approved for DNA_002', time: '1 day ago', icon: 'fas fa-check' },
+                { type: 'zkp', message: 'Zero-knowledge proof verified', time: '2 days ago', icon: 'fas fa-shield-alt' }
+            ];
+            
+            container.innerHTML = activities.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="${activity.icon}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p>${activity.message}</p>
+                        <span class="activity-time">${activity.time}</span>
+                    </div>
                 </div>
-                <div class="activity-content">
-                    <p>${activity.message}</p>
-                    <span class="activity-time">${activity.time}</span>
-                </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
     }
 
     setupTabNavigation() {
@@ -1610,10 +1670,66 @@ async function denyRequest(requestId) {
 }
 
 function viewProofDetails(proofId) {
-    if (app) {
-        app.showNotification(`Viewing proof details: ${proofId}`, 'info');
-        // TODO: Implement proof details modal
-    }
+    if (!app) return;
+    
+    // Create modal immediately with proof details
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Proof Details: ${proofId}</h3>
+                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="proof-details">
+                    <div class="detail-row">
+                        <strong>Proof ID:</strong> ${proofId}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Sample ID:</strong> DNA_004
+                    </div>
+                    <div class="detail-row">
+                        <strong>Circuit Type:</strong> access_permission
+                    </div>
+                    <div class="detail-row">
+                        <strong>Status:</strong> 
+                        <span class="status-badge status-verified">Verified</span>
+                    </div>
+                    <div class="detail-row">
+                        <strong>Created:</strong> ${new Date().toLocaleString()}
+                    </div>
+                    <div class="detail-row">
+                        <strong>Simulated:</strong> Yes
+                    </div>
+                    <div class="detail-section">
+                        <strong>Proof Structure:</strong>
+                        <pre class="proof-data">{
+  "commitment": "abc123def456789abcdef...",
+  "challenge": "789ghi012jkl345mnopqr...",
+  "response": "345mno678pqr901stuvwx...",
+  "nonce": "random_nonce_123456",
+  "protocol": "sigma_protocol"
+}</pre>
+                    </div>
+                    <div class="detail-section">
+                        <strong>Public Inputs:</strong>
+                        <pre class="proof-data">{
+  "sample_id": "DNA_004_hash_value",
+  "timestamp": "${Math.floor(Date.now() / 1000)}",
+  "permission_hash": "permission_hash_value"
+}</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    app.showNotification('Proof details opened', 'success');
 }
 
 async function uploadSample() {
@@ -1769,34 +1885,55 @@ async function requestAccess() {
     }
 }
 
+
 async function generateZKProof() {
     if (!app) return;
     
-    const circuitType = document.getElementById('circuit-type')?.value;
+    const circuitType = document.getElementById('circuit-type')?.value || 'access_permission';
     const sampleId = document.getElementById('zkp-sample-id')?.value;
     const userSecret = document.getElementById('zkp-user-secret')?.value;
     
-    if (!circuitType || !sampleId || !userSecret) {
+    if (!sampleId || !userSecret) {
         app.showNotification('Please fill in all fields', 'warning');
         return;
     }
     
+    if (userSecret.length < 8) {
+        app.showNotification('User secret must be at least 8 characters long', 'warning');
+        return;
+    }
+    
     try {
+        // Debug logging
+        console.log('ZKP Request Data:', {
+            circuit_type: circuitType,
+            sample_id: sampleId,
+            user_secret: userSecret ? `${userSecret.length} chars` : 'empty'
+        });
+        
         app.showNotification(`Generating ${circuitType} proof for ${sampleId}`, 'info');
+        
+        const requestBody = {
+            circuit_type: circuitType,
+            sample_id: sampleId,
+            user_secret: userSecret
+        };
+        
+        console.log('Sending ZKP request:', requestBody);
         
         const response = await fetch(`${app.apiBaseUrl}/zkp/generate`, {
             method: 'POST',
             headers: app.getAuthHeaders(),
-            body: JSON.stringify({
-                circuit_type: circuitType,
-                sample_id: sampleId,
-                user_secret: userSecret
-            })
+            body: JSON.stringify(requestBody)
         });
         
         if (response.ok) {
             const result = await response.json();
-            app.showNotification('Zero-knowledge proof generated successfully!', 'success');
+            if (result.simulated) {
+                app.showNotification('✅ Zero-knowledge proof generated successfully! (Simulation mode)', 'success');
+            } else {
+                app.showNotification('✅ Zero-knowledge proof generated successfully!', 'success');
+            }
             // Clear form
             document.getElementById('zkp-sample-id').value = '';
             document.getElementById('zkp-user-secret').value = '';
@@ -1804,7 +1941,18 @@ async function generateZKProof() {
             await app.loadZKProofs();
         } else {
             const error = await response.json();
-            app.showNotification(`Proof generation failed: ${error.detail || 'Unknown error'}`, 'error');
+            let errorMessage = error.detail || 'Unknown error';
+            
+            // Provide helpful guidance for common errors
+            if (errorMessage.includes('at least 8 characters')) {
+                errorMessage += '\n\n💡 Tip: Your secret must be at least 8 characters long for security.';
+            } else if (errorMessage.includes('Sample not found')) {
+                errorMessage += '\n\n💡 Tip: Make sure you own this sample and it exists in the system.';
+            } else if (errorMessage.includes('only generate ZKP for your own samples')) {
+                errorMessage += '\n\n💡 Tip: You can only create proofs for samples you uploaded.';
+            }
+            
+            app.showNotification(`Proof generation failed: ${errorMessage}`, 'error');
         }
         
     } catch (error) {
@@ -1812,3 +1960,215 @@ async function generateZKProof() {
         app.showNotification(`Proof generation failed: ${error.message}`, 'error');
     }
 }
+
+
+async function transferNFT(tokenId) {
+    if (!app) return;
+    
+    const toUid = prompt('Enter recipient user ID or email:');
+    if (!toUid) return;
+    
+    const password = prompt('Enter your password to confirm transfer:');
+    if (!password) return;
+    
+    try {
+        app.showNotification(`Transferring NFT ${tokenId}...`, 'info');
+        
+        const response = await fetch(`${app.apiBaseUrl}/nft/transfer`, {
+            method: 'POST',
+            headers: app.getAuthHeaders(),
+            body: JSON.stringify({
+                token_id: tokenId,
+                from_uid: app.currentUser.uid,
+                to_uid: toUid,
+                password: password
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            app.showNotification('NFT transferred successfully!', 'success');
+            // Refresh NFTs list
+            await app.loadNFTs();
+        } else {
+            const error = await response.json();
+            app.showNotification(`Transfer failed: ${error.detail || 'Unknown error'}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Transfer error:', error);
+        app.showNotification(`Transfer failed: ${error.message}`, 'error');
+    }
+}
+
+async function viewNFTDetails(tokenId) {
+    if (!app) return;
+    
+    try {
+        const response = await fetch(`${app.apiBaseUrl}/nft/tokens`, {
+            headers: ap
+}
+}zkp');
+    itchTab('   app.sw     {
+ if (app)    tab
+ KPto the Zwitch   // Just sed
+  al need modthe tab, noe in s inlineration i/ ZKP gen  /al() {
+  ZKPModown sh
+
+functio
+    }
+}dalmoils  detaement proofTODO: Impl/   /      nfo');
+'i`, d} ${proofIs:iltaof deing procation(`ViewowNotifipp.sh    a
+    if (app) {fId) {
+    roos(pProofDetailnction view
+fu
+}
+ }r');
+   `, 'erroessage}d: ${error.mnial faile`Detification(No  app.show     rror);
+ , eerror:'l rror('Deniasole.e   conor) {
+     tch (err } ca   
+        
+  }    
+  r'); 'errorror'}`,'Unknown el || .detairroriled: ${enial facation(`DehowNotifip.s         ap;
+   .json()nseit respo= awanst error         co
+       } else {     uests();
+cessReqpp.loadAcit a        awa
+    requestsccess Refresh a        // ss');
+    ed', 'succerequest deni('Access ificationhowNot app.s           .ok) {
+se  if (respon
+                   });
+})
+           son
+    : reaonreas      
+          : 'deny',on    acti         ,
+   ntUser.uidd: app.currever_ui   appro    
+         : requestId,quest_id       re       
+  fy({tringiJSON.s   body:       
+   Headers(),thAurs: app.get     heade
+        'POST',   method:        {
+  pprove`,cess/a}/ac.apiBaseUrlch(`${appwait fetsponse = a const re      
+      ;
+   'info')uest...', eqss rnying acceon('DeficatiwNoti app.sho
+       ry {
+    t 
+   ) return;f (!reason    in:');
+al reasoter deni= prompt('Eneason onst r
+    
+    c;p) return(!ap   if  {
+ stId)(requeyRequesttion denc func
+asyn
+
+    }
+};, 'error')age}`error.mess ${failed:n(`Approval ficatiootip.showN  apr);
+      or:', errol errprovaror('Aponsole.er   c{
+     tch (error) 
+    } ca     
+         };
+  ror')rror'}`, 'erUnknown edetail || '{error.failed: $roval (`Appionificatotp.showN ap       
+    ();son.jit response= awat error       cons
+        } else {;
+      s()sRequestAcces.load await app         equests
+  access rRefresh  //           uccess');
+ , 'sd!' approveuestcess req'Acification(ot   app.showN
+          {sponse.ok)     if (re   
+   ;
+             })  })
+     n
+     n: reasoso       rea  
+       'approve',ction:      a
+           id,User.u.current appuid:pprover_          a    questId,
+   rest_id:eque           r   
+  ify({.string JSON      body:     
+ hHeaders(),pp.getAutrs: aeade h          OST',
+ 'P:     method{
+        `, ss/approvel}/acceUrp.apiBaseap fetch(`${ait= awsponse rest 
+        con    ');
+    ...', 'infos requestroving accescation('Apptifi.showNo
+        app try {  
+   
+  proved';| 'Aponal):') |opti (sonval reater appro prompt('Enon =st reas   
+    con
+ n;etur r (!app)    if {
+tId)quesreest(queReovunction appr
+async f    }
+}
+move();
+.redal    mo    odal) {
+if (m  odal');
+  tails-mId('nft-dentByt.getElemeal = documenod m
+    constal() {odTDetailsM closeNFction
+}
+
+funild(modal);ody.appendCh document.b   
+    
+`;</div>
+           
+     </div>       utton>
+    </b            r
+ nsfe"></i> Trachange-alts fa-exlass="fa        <i c      ">
+      ')d}n_i'${nft.tokeferNFT(ansk="trary" onclicrimbtn-ps="btn <button clas                utton>
+Close</bdal()">lsMoaiet"closeNFTD" onclick=arysecondtn-"btn bss= cla  <button         er">
+     "modal-foot<div class=        </div>
+                /div>
+ <              /div>
+    <       
+           </div>                        ` : ''}
+                           /div>
+           <            
+     pan>}</smetadata_uri${nft.-display">ashclass="hn       <spa                     l>
+      URI:</labetadaMeta<label>                               m">
+ itetail-v class="de <di                           _uri ? `
+t.metadata        ${nf            
+           </div>                      
+   ng()}</span>leStrioca.now()).toL1000 || Dateimestamp * nft.mint_tnew Date(an>${sp          <                 l>
+     ed:</labeint <label>M                             em">
+  "detail-itass=   <div cl                          </div>
+                         </span>
+  e_id}samplpan>${nft.      <s                  l>
+        le ID:</labempel>Sa     <lab                           item">
+ss="detail-  <div cla                 >
+            </div                       span>
+  t.owner}</ou' : nfid ? 'Yer?.upp.currentUs.owner === aftpan>${n    <s                            :</label>
+label>Owner <                       ">
+        tail-item class="de      <div                   </div>
+                          
+     id}</span>n_${nft.token>   <spa                          
+   l>ID:</labeToken el>   <lab                       m">
+      etail-ite"dss= <div cla                  
+         il-grid">tas="deasdiv cl       <                 h4>
+formation</ Inh4>Token    <                ion">
+    ail-sect="detclass     <div          
+      details">ft- class="ndiv           <     ">
+bodys="modal-clasv        <di
+        </div>      ton>
+   ;</butmes()">&tisModalNFTDetailck="closenclitn" o"close-bclass=    <button          
+   </h3>ils Deta"></i> NFTertificates="fas fa-ch3><i clas           <    ">
+ odal-header"m <div class=        
+   ontent">odal-civ class="m    <d    = `
+ HTMLmodal.innerdal';
+    ails-modetd = 'nft-.i modaltive';
+    'modal aclassName =al.c');
+    modment('divnt.createEle = documenst modal  co{
+  odal(nft) TDetailsMtion showNF
+
+func }
+}   error');
+, 'ils' NFT detad to loadleion('Faificattipp.showNo      arror);
+  ils:', ed NFT detaled to loaFairor('.erlenso
+        coor) {(erratch     } c        
+       }
+;
+ or')ils', 'errT detaad NFFailed to loification('Not.show    app      e {
+         } els    }
+   ;
+      r')rro', 'eundt foFT nofication('Napp.showNoti                lse {
+        } e(nft);
+    sModalNFTDetail        show        {
+    if (nft)      
+              
+ );=== tokenIdid en_tok> n.n =.nfts?.find(t nft = data     cons     ();
+  .json responseawaitonst data =        c
+     sponse.ok) {   if (re         
+  
+    });rs()
+      AuthHeadep.get

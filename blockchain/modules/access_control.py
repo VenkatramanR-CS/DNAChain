@@ -454,3 +454,11 @@ class AccessControl:
             result['status'] = request.status.value
             results[rid] = result
         return results
+    
+    def approve_request(self, request_id: str, approver: str, reason: str = "") -> Dict[str, Any]:
+        """Approve an access request (wrapper for approve_access)"""
+        return self.approve_access(approver, request_id)
+    
+    def deny_request(self, request_id: str, denier: str, reason: str = "") -> Dict[str, Any]:
+        """Deny an access request (wrapper for deny_access)"""
+        return self.deny_access(denier, request_id, reason)

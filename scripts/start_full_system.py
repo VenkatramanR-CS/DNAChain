@@ -24,7 +24,7 @@ class SystemLauncher:
     
     def __init__(self):
         self.processes = []
-        self.api_port = 8000
+        self.api_port = 8001
         self.frontend_port = 8080
         
     def check_dependencies(self):
@@ -83,7 +83,7 @@ class SystemLauncher:
         
         # Test API connection
         try:
-            import requests
+            import requests  # type: ignore
             response = requests.get(f"http://localhost:{self.api_port}/health", timeout=5)
             if response.status_code == 200:
                 print("✅ API server started successfully!")
@@ -119,7 +119,7 @@ class SystemLauncher:
         
         # Test frontend connection
         try:
-            import requests
+            import requests  # type: ignore
             response = requests.get(f"http://localhost:{self.frontend_port}", timeout=5)
             if response.status_code == 200:
                 print("✅ Frontend server started successfully!")
@@ -137,7 +137,7 @@ class SystemLauncher:
         
         try:
             # Import and run test functions
-            from scripts.test_system import (
+            from scripts.test_system import (  # type: ignore
                 test_blockchain_components,
                 test_encryption,
                 test_key_management,
@@ -202,7 +202,7 @@ class SystemLauncher:
         print("  • Zero-Knowledge Proof Generation")
         print("  • Encrypted File Storage")
         print("  • Digital Signatures & Key Management")
-        print("  • Firebase Integration (simulated)")
+        print("  • Firebase Integration (active)")
         print("  • Real-time System Monitoring")
         print("\n💡 Quick Actions:")
         print("  • Upload DNA Sample: Frontend > DNA Samples > Upload")

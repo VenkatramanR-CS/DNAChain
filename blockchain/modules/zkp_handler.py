@@ -227,6 +227,59 @@ class ZKPHandler:
                 results.append(asdict(proof))
         return results
     
+    def store_proof(self, proof_id: str, prover: str, circuit_type: str, proof: str, public_inputs: str) -> Dict[str, Any]:
+        """Store a zero-knowledge proof"""
+        try:
+            # Create proof object
+            zkp_proof = ZKProof(
+                proof_id=proof_id,
+                prover=prover,
+                circuit_type=circuit_type,
+                proof=proof,
+                public_inputs=public_inputs,
+                verified=False,  # Will be verified separately
+                timestamp=int(time.time())
+            )
+            
+            # Store proof
+            self.proofs[proof_id] = zkp_proof
+            
+            return {
+                'success': True,
+                'message': f'Proof {proof_id} stored successfully',
+                'proof_id': proof_id
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Proof storage failed: {str(e)}'
+            }
+    
+    def verify_proof_result(self, request_id: str, verifier: str, verified: bool, circuit_type: str) -> Dict[str, Any]:
+        """Store verification result"""
+        try:
+            # Find proof by request_id (simplified - in real implementation would have better mapping)
+            for proof in self.proofs.values():
+                if proof.proof_id == request_id:
+                    proof.verified = verified
+                    return {
+                        'success': True,
+                        'message': f'Verification result stored for {request_id}',
+                        'verified': verified
+                    }
+            
+            return {
+                'success': False,
+                'message': f'Proof {request_id} not found'
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Verification result storage failed: {str(e)}'
+            }
+    
     def validate_circuit_inputs(self, circuit_type: str, 
                               inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Validate inputs for a specific circuit type"""

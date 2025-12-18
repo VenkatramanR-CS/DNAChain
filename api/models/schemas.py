@@ -31,8 +31,7 @@ class NFTMintRequest(BaseModel):
     """NFT minting request"""
     token_id: str = Field(..., description="Unique token identifier")
     sample_id: str = Field(..., description="Associated DNA sample ID")
-    owner: str = Field(..., description="Token owner address")
-    metadata_uri: str = Field(..., description="Metadata URI")
+    metadata_uri: Optional[str] = Field(default="", description="Metadata URI")
 
 
 class NFTResponse(BaseModel):
@@ -47,7 +46,6 @@ class NFTResponse(BaseModel):
 
 class AccessRequest(BaseModel):
     """Access request"""
-    requester: str = Field(..., description="Requester wallet address")
     sample_id: str = Field(..., description="DNA sample ID")
     purpose: str = Field(..., description="Purpose of access")
     expiry_hours: int = Field(default=24, description="Request expiry in hours")
@@ -245,12 +243,15 @@ class UserProfile(BaseModel):
     """User profile"""
     uid: str
     email: str
-    display_name: str
-    role: str
-    created_at: datetime
-    last_login: Optional[datetime] = None
+    display_name: Optional[str] = Field(None, alias='displayName')
+    role: Optional[str] = 'user'
+    created_at: Optional[datetime] = Field(None, alias='createdAt')
+    last_login: Optional[datetime] = Field(None, alias='lastLogin')
     wallet_address: Optional[str] = None
-    verified: bool = False
+    verified: bool = True
+    
+    class Config:
+        populate_by_name = True  # Allow both field name and alias
 
 
 class AuthResponse(BaseModel):

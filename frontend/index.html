@@ -336,6 +336,12 @@
         <main class="main-content">
             <!-- Dashboard Tab -->
             <div id="dashboard" class="tab-content active">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-dashboard"></i> Dashboard</h2>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> Refresh Counts
+                    </button>
+                </div>
                 <div class="dashboard-grid">
                     <div class="stat-card">
                         <div class="stat-icon">
@@ -425,9 +431,14 @@
             <div id="nfts" class="tab-content">
                 <div class="section-header">
                     <h2><i class="fas fa-certificate"></i> NFT Management</h2>
-                    <button class="btn btn-primary" onclick="showMintModal()">
-                        <i class="fas fa-plus"></i> Mint NFT
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="showMintModal()">
+                            <i class="fas fa-plus"></i> Mint NFT
+                        </button>
+                        <button class="btn btn-secondary" onclick="migrateNFTOwnership()">
+                            <i class="fas fa-sync-alt"></i> Fix Missing NFTs
+                        </button>
+                    </div>
                 </div>
 
                 <div class="nfts-grid" id="nfts-grid">
@@ -439,21 +450,32 @@
             <div id="access" class="tab-content">
                 <div class="section-header">
                     <h2><i class="fas fa-key"></i> Access Control</h2>
-                    <button class="btn btn-primary" onclick="showAccessRequestModal()">
-                        <i class="fas fa-hand-paper"></i> Request Access
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="refreshAccessRequests()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-primary" onclick="showAccessRequestModal()">
+                            <i class="fas fa-hand-paper"></i> Request Access
+                        </button>
+                    </div>
                 </div>
 
                 <div class="access-sections">
                     <div class="section">
-                        <h3>Pending Requests (For My Samples)</h3>
+                        <h3><i class="fas fa-crown"></i> Pending Requests (For My Samples)</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 1rem;">
+                            Requests from other users who want access to your DNA samples. Only you can approve or deny these.
+                        </p>
                         <div id="pending-requests-list" class="requests-list">
                             <!-- Pending requests will be populated here -->
                         </div>
                     </div>
 
                     <div class="section">
-                        <h3>My Access Requests</h3>
+                        <h3><i class="fas fa-paper-plane"></i> My Access Requests</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 1rem;">
+                            Requests you've made to access other users' DNA samples.
+                        </p>
                         <div id="my-requests-list" class="requests-list">
                             <!-- User's requests will be populated here -->
                         </div>
@@ -487,7 +509,8 @@
                             </div>
                             <div class="form-group">
                                 <label>User Secret:</label>
-                                <input type="password" id="zkp-user-secret" placeholder="Enter user secret">
+                                <input type="password" id="zkp-user-secret" placeholder="Enter your secret (min 8 characters)">
+                                <small class="form-help">Enter any secret you want to use. This proves you know the secret without revealing it.</small>
                             </div>
                             <button class="btn btn-secondary" onclick="generateZKProof()">
                                 <i class="fas fa-cog"></i> Generate Proof
@@ -615,8 +638,7 @@
                     </div>
                     <div class="form-group">
                         <label>Access Duration (hours):</label>
-                        <input type="number" id="access-duration" min="1" max="168" required placeholder="Enter duration in hours">
-                        <input type="number" id="expiry-hours" value="24" min="1" max="168">
+                        <input type="number" id="access-duration" value="24" min="1" max="168" required placeholder="Enter duration in hours">
                         <small>Maximum 168 hours (7 days)</small>
                     </div>
                 </form>
@@ -681,5 +703,6 @@
     <div id="notification-container" class="notification-container"></div>
 
     <script src="app.js"></script>
+    <script src="additional-functions.js"></script>
 </body>
 </html>

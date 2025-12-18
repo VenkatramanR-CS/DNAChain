@@ -235,6 +235,70 @@ class DNABlockchainApp(BaseApplication):
             to_address=tx_data['to_address']
         )
     
+    # Public API methods for external access
+    def register_dna_sample(self, sample_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Register a DNA sample"""
+        return self.dna_registry.register_sample(
+            sample_id=sample_data['sample_id'],
+            owner=sample_data['owner'],
+            file_hash=sample_data['file_hash'],
+            cid=sample_data['cid'],
+            metadata=sample_data['metadata']
+        )
+    
+    def get_sample(self, sample_id: str) -> Optional[Dict[str, Any]]:
+        """Get DNA sample by ID"""
+        return self.dna_registry.get_sample(sample_id)
+    
+    def check_access_permission(self, user_id: str, sample_id: str) -> bool:
+        """Check if user has access permission to sample"""
+        return self.access_control.check_access_permission(user_id, sample_id)
+    
+    def mint_nft(self, nft_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Mint an NFT"""
+        return self.nft_module.mint_token(
+            token_id=nft_data['token_id'],
+            owner=nft_data['owner'],
+            sample_id=nft_data['sample_id'],
+            metadata_uri=nft_data['metadata_uri']
+        )
+    
+    def get_nft(self, token_id: str) -> Optional[Dict[str, Any]]:
+        """Get NFT by token ID"""
+        return self.nft_module.get_token(token_id)
+    
+    def transfer_nft(self, token_id: str, from_address: str, to_address: str) -> Dict[str, Any]:
+        """Transfer NFT"""
+        return self.nft_module.transfer_token(token_id, from_address, to_address)
+    
+    def request_access(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Request access to a sample"""
+        return self.access_control.request_access(
+            requester=request_data['requester'],
+            sample_id=request_data['sample_id'],
+            purpose=request_data['purpose']
+        )
+    
+    def get_access_request(self, request_id: str) -> Optional[Dict[str, Any]]:
+        """Get access request by ID"""
+        return self.access_control.get_request(request_id)
+    
+    def approve_access_request(self, request_id: str, approver: str, reason: str) -> Dict[str, Any]:
+        """Approve access request"""
+        return self.access_control.approve_request(request_id, approver, reason)
+    
+    def deny_access_request(self, request_id: str, approver: str, reason: str) -> Dict[str, Any]:
+        """Deny access request"""
+        return self.access_control.deny_request(request_id, approver, reason)
+    
+    def store_zkp(self, proof_id: str, prover: str, circuit_type: str, proof: str, public_inputs: str) -> Dict[str, Any]:
+        """Store ZKP proof"""
+        return self.zkp_handler.store_proof(proof_id, prover, circuit_type, proof, public_inputs)
+    
+    def verify_zkp(self, request_id: str, verifier: str, verified: bool, circuit_type: str) -> Dict[str, Any]:
+        """Verify ZKP proof"""
+        return self.zkp_handler.verify_proof_result(request_id, verifier, verified, circuit_type)
+
     def _get_state_for_hash(self) -> Dict[str, Any]:
         """Get state data for hash calculation"""
         return {

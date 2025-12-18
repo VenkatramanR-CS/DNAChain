@@ -3,13 +3,14 @@ Firestore Handler for DNA System Metadata
 Manages metadata, user profiles, and system data in Firestore
 """
 
+import os
 import json
 import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 try:
-    import firebase_admin
-    from firebase_admin import credentials, firestore
+    import firebase_admin  # type: ignore
+    from firebase_admin import credentials, firestore  # type: ignore
     FIREBASE_AVAILABLE = True
 except ImportError:
     FIREBASE_AVAILABLE = False
@@ -18,7 +19,7 @@ except ImportError:
 class FirestoreHandler:
     """Firestore database handler for metadata and user data"""
     
-    def __init__(self, config_path: str = "firebase/config.json"):
+    def __init__(self, config_path: str = "dna_firebase/config.json"):
         self.config_path = config_path
         self.db = None
         self.initialized = False
@@ -56,7 +57,7 @@ class FirestoreHandler:
     def create_user_profile(self, user_id: str, profile_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create user profile in Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_user_create(user_id, profile_data)
             
             # Add timestamps
@@ -85,7 +86,7 @@ class FirestoreHandler:
     def get_user_profile(self, user_id: str) -> Dict[str, Any]:
         """Get user profile from Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_user_get(user_id)
             
             user_ref = self.db.collection('users').document(user_id)
@@ -111,7 +112,7 @@ class FirestoreHandler:
     def update_user_profile(self, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
         """Update user profile in Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_user_update(user_id, updates)
             
             # Add update timestamp
@@ -136,8 +137,12 @@ class FirestoreHandler:
     def store_sample_metadata(self, sample_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Store DNA sample metadata in Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, using simulation for {sample_id}")
                 return self._simulate_metadata_store(sample_id, metadata)
+            
+            print(f"🔥 Storing sample metadata in Firestore: {sample_id}")
+            print(f"🔥 Collection: dna_samples, Document: {sample_id}")
             
             # Add timestamps
             metadata.update({
@@ -149,6 +154,8 @@ class FirestoreHandler:
             sample_ref = self.db.collection('dna_samples').document(sample_id)
             sample_ref.set(metadata)
             
+            print(f"✅ Successfully stored metadata for {sample_id} in Firestore")
+            
             return {
                 'success': True,
                 'sample_id': sample_id,
@@ -156,15 +163,219 @@ class FirestoreHandler:
             }
             
         except Exception as e:
+            print(f"❌ Firestore storage failed for {sample_id}: {str(e)}")
             return {
                 'success': False,
                 'error': f'Metadata storage failed: {str(e)}'
             }
     
+    def store_nft_metadata(self, token_id: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Store NFT metadata in separate Firestore collection"""
+        try:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, using simulation for NFT {token_id}")
+                return self._simulate_metadata_store(token_id, metadata)
+            
+            print(f"🎨 Storing NFT metadata in Firestore: {token_id}")
+            print(f"🎨 Collection: nft_tokens, Document: {token_id}")
+            
+            # Add timestamps
+            metadata.update({
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            # Store in NFT collection (separate from DNA samples)
+            nft_ref = self.db.collection('nft_tokens').document(token_id)
+            nft_ref.set(metadata)
+            
+            print(f"✅ Successfully stored NFT metadata for {token_id} in Firestore")
+            
+            return {
+                'success': True,
+                'token_id': token_id,
+                'message': 'NFT metadata stored successfully'
+            }
+            
+        except Exception as e:
+            print(f"❌ NFT Firestore storage failed for {token_id}: {str(e)}")
+            return {
+                'success': False,
+                'error': f'NFT metadata storage failed: {str(e)}'
+            }
+    
+    def query_nfts_by_owner(self, owner_id: str) -> Dict[str, Any]:
+        """Query NFT tokens by owner (supports both UID and email lookup)"""
+        try:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, using simulation for NFT owner: {owner_id}")
+                return self._simulate_nfts_query(owner_id)
+            
+            print(f"🎨 Querying Firestore for NFTs by owner_uid: {owner_id}")
+            nfts_ref = self.db.collection('nft_tokens')
+            
+            # Query by owner_uid first
+            query = nfts_ref.where(filter=firestore.FieldFilter('owner_uid', '==', owner_id))
+            docs = list(query.stream())
+            
+            nfts = []
+            for doc in docs:
+                nft_data = doc.to_dict()
+                nft_data['token_id'] = doc.id
+                nfts.append(nft_data)
+                print(f"🎨 Found NFT by UID: {doc.id}")
+            
+            # Also check for legacy transfers that might have stored email instead of UID
+            if '@' not in owner_id:  # If owner_id is a UID, also check by email
+                # This is a fallback for any NFTs that might have been transferred with email
+                # We can't easily get the email from UID here, so we'll skip this for now
+                pass
+            else:
+                # If owner_id is an email, also query by owner field (legacy)
+                print(f"🎨 Also querying by email (legacy): {owner_id}")
+                email_query = nfts_ref.where(filter=firestore.FieldFilter('owner', '==', owner_id))
+                email_docs = list(email_query.stream())
+                
+                for doc in email_docs:
+                    nft_data = doc.to_dict()
+                    nft_data['token_id'] = doc.id
+                    # Check if we already have this NFT (avoid duplicates)
+                    if not any(n['token_id'] == nft_data['token_id'] for n in nfts):
+                        nfts.append(nft_data)
+                        print(f"🎨 Found NFT by email (legacy): {doc.id}")
+            
+            print(f"🎨 Firestore NFT query complete: {len(nfts)} NFTs found")
+            
+            return {
+                'success': True,
+                'nfts': nfts,
+                'count': len(nfts)
+            }
+            
+        except Exception as e:
+            print(f"❌ NFT query failed for {owner_id}: {str(e)}")
+            return {
+                'success': False,
+                'error': f'NFT query failed: {str(e)}'
+            }
+    
+    def _simulate_nfts_query(self, owner_id: str) -> Dict[str, Any]:
+        """Simulate NFT query for demo mode"""
+        return {
+            'success': True,
+            'nfts': [
+                {
+                    'token_id': 'NFT_001',
+                    'owner_uid': owner_id,
+                    'sample_id': 'DNA_NFT_001',  # Always include sample_id
+                    'metadata_uri': 'https://example.com/nft/1',
+                    'mint_timestamp': int(time.time()),
+                    'created_at': time.time(),
+                    'simulated': True
+                }
+            ],
+            'count': 1,
+            'simulated': True
+        }
+    
+    def _simulate_nft_get(self, token_id: str) -> Dict[str, Any]:
+        """Simulate NFT metadata get for demo mode"""
+        return {
+            'success': True,
+            'metadata': {
+                'token_id': token_id,
+                'owner_uid': 'demo_user',
+                'sample_id': f'DNA_{token_id}',  # Always include sample_id
+                'metadata_uri': 'https://example.com/nft/metadata',
+                'mint_timestamp': int(time.time()),
+                'created_at': time.time(),
+                'simulated': True
+            },
+            'simulated': True
+        }
+    
+    def store_access_request(self, request_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Store access request in Firestore"""
+        try:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, using simulation for request {request_id}")
+                return {'success': True, 'simulated': True}
+            
+            print(f"🔐 Storing access request in Firestore: {request_id}")
+            
+            # Add timestamps
+            request_data.update({
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            # Store in access_requests collection
+            request_ref = self.db.collection('access_requests').document(request_id)
+            request_ref.set(request_data)
+            
+            print(f"✅ Successfully stored access request {request_id} in Firestore")
+            
+            return {
+                'success': True,
+                'request_id': request_id,
+                'message': 'Access request stored successfully'
+            }
+            
+        except Exception as e:
+            print(f"❌ Access request Firestore storage failed for {request_id}: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Access request storage failed: {str(e)}'
+            }
+    
+    def migrate_email_to_uid_ownership(self, email: str, uid: str) -> Dict[str, Any]:
+        """Migrate NFT ownership from email to UID"""
+        try:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, skipping migration")
+                return {'success': True, 'migrated': 0, 'simulated': True}
+            
+            print(f"🔄 Migrating NFT ownership from email {email} to UID {uid}")
+            
+            # Find NFTs owned by email
+            nfts_ref = self.db.collection('nft_tokens')
+            email_query = nfts_ref.where(filter=firestore.FieldFilter('owner', '==', email))
+            docs = list(email_query.stream())
+            
+            migrated_count = 0
+            for doc in docs:
+                try:
+                    # Update the document to use UID instead of email
+                    doc.reference.update({
+                        'owner_uid': uid,
+                        'owner': uid,  # Update both fields
+                        'migrated_from_email': email,
+                        'migration_timestamp': firestore.SERVER_TIMESTAMP
+                    })
+                    migrated_count += 1
+                    print(f"✅ Migrated NFT {doc.id} from email to UID")
+                except Exception as e:
+                    print(f"❌ Failed to migrate NFT {doc.id}: {e}")
+            
+            print(f"🔄 Migration complete: {migrated_count} NFTs migrated")
+            
+            return {
+                'success': True,
+                'migrated': migrated_count,
+                'message': f'Successfully migrated {migrated_count} NFTs from email to UID'
+            }
+            
+        except Exception as e:
+            print(f"❌ Migration failed: {str(e)}")
+            return {
+                'success': False,
+                'error': f'Migration failed: {str(e)}'
+            }
+
     def get_sample_metadata(self, sample_id: str) -> Dict[str, Any]:
         """Get DNA sample metadata from Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_metadata_get(sample_id)
             
             sample_ref = self.db.collection('dna_samples').document(sample_id)
@@ -190,11 +401,13 @@ class FirestoreHandler:
     def query_samples_by_owner(self, owner_id: str) -> Dict[str, Any]:
         """Query DNA samples by owner"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
+                print(f"⚠️  Firestore not initialized, using simulation for owner: {owner_id}")
                 return self._simulate_samples_query(owner_id)
             
+            print(f"🔥 Querying Firestore for samples by owner_uid: {owner_id}")
             samples_ref = self.db.collection('dna_samples')
-            query = samples_ref.where('owner', '==', owner_id)
+            query = samples_ref.where(filter=firestore.FieldFilter('owner_uid', '==', owner_id))
             docs = query.stream()
             
             samples = []
@@ -202,6 +415,9 @@ class FirestoreHandler:
                 sample_data = doc.to_dict()
                 sample_data['sample_id'] = doc.id
                 samples.append(sample_data)
+                print(f"📄 Found sample: {doc.id}")
+            
+            print(f"🔥 Firestore query complete: {len(samples)} samples found")
             
             return {
                 'success': True,
@@ -215,11 +431,38 @@ class FirestoreHandler:
                 'error': f'Sample query failed: {str(e)}'
             }
     
+    # NFT Metadata Management (Fixed - removed duplicates)
+    def get_nft_metadata(self, token_id: str) -> Dict[str, Any]:
+        """Get NFT metadata from Firestore"""
+        try:
+            if not self.initialized or self.db is None:
+                return self._simulate_nft_get(token_id)
+            
+            nft_ref = self.db.collection('nft_tokens').document(token_id)
+            nft_doc = nft_ref.get()
+            
+            if nft_doc.exists:
+                return {
+                    'success': True,
+                    'metadata': nft_doc.to_dict()
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'NFT metadata not found'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'NFT metadata retrieval failed: {str(e)}'
+            }
+    
     # Access Logs
     def log_access_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
         """Log access event to Firestore"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_access_log(event_data)
             
             # Add timestamp
@@ -242,11 +485,11 @@ class FirestoreHandler:
                 'error': f'Access logging failed: {str(e)}'
             }
     
-    def get_access_logs(self, sample_id: str = None, user_id: str = None, 
+    def get_access_logs(self, sample_id: Optional[str] = None, user_id: Optional[str] = None, 
                        limit: int = 100) -> Dict[str, Any]:
         """Get access logs with optional filtering"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_access_logs_get(sample_id, user_id, limit)
             
             logs_ref = self.db.collection('access_logs')
@@ -254,9 +497,9 @@ class FirestoreHandler:
             
             # Apply filters
             if sample_id:
-                query = query.where('sample_id', '==', sample_id)
+                query = query.where(filter=firestore.FieldFilter('sample_id', '==', sample_id))
             if user_id:
-                query = query.where('user_id', '==', user_id)
+                query = query.where(filter=firestore.FieldFilter('user_id', '==', user_id))
             
             # Apply limit
             query = query.limit(limit)
@@ -284,7 +527,7 @@ class FirestoreHandler:
     def store_analytics_event(self, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
         """Store analytics event"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_analytics_store(event_type, event_data)
             
             # Prepare analytics document
@@ -313,7 +556,7 @@ class FirestoreHandler:
     def get_system_stats(self) -> Dict[str, Any]:
         """Get system statistics"""
         try:
-            if not self.initialized:
+            if not self.initialized or self.db is None:
                 return self._simulate_system_stats()
             
             stats = {}
@@ -331,7 +574,7 @@ class FirestoreHandler:
             # Count access logs (last 30 days)
             thirty_days_ago = datetime.utcnow().timestamp() - (30 * 24 * 3600)
             logs_ref = self.db.collection('access_logs')
-            recent_logs = logs_ref.where('timestamp', '>=', thirty_days_ago).stream()
+            recent_logs = logs_ref.where(filter=firestore.FieldFilter('timestamp', '>=', thirty_days_ago)).stream()
             stats['recent_access_events'] = len(list(recent_logs))
             
             return {
@@ -433,7 +676,7 @@ class FirestoreHandler:
             'simulated': True
         }
     
-    def _simulate_access_logs_get(self, sample_id: str, user_id: str, limit: int) -> Dict[str, Any]:
+    def _simulate_access_logs_get(self, sample_id: Optional[str], user_id: Optional[str], limit: int) -> Dict[str, Any]:
         return {
             'success': True,
             'logs': [
