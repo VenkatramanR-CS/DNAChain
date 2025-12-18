@@ -848,7 +848,8 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--text-primary);
+    color: #4f46e5;
+
 }
 
 /* Buttons */
@@ -1821,7 +1822,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    color: var(--text-primary);
+    color: #4f46e5;
     font-size: 1.5rem;
 }
 
